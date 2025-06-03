@@ -79,3 +79,51 @@ docker-compose.override.yml
 
 # VSCode
 .vscode/
+
+# ═══════════════════════════════════════════════════════════════
+# REPOSITORY CLEANLINESS RULES
+# ═══════════════════════════════════════════════════════════════
+
+# Prevent temporary/draft documentation
+*_DRAFT.md
+*_draft.md
+*_TODO.md
+*_todo.md
+*_TEMP.md
+*_temp.md
+NOTES.md
+notes.md
+TODO.md
+todo.md
+
+# Prevent development-only documentation
+DEBUG_*.md
+SETUP_*.md
+MIGRATION_*.md
+INTEGRATION_*.md
+FEATURES_*.md
+VOICE_*.md
+EMBEDDING_*.md
+ELEVENLABS_*.md
+
+# Prevent platform-specific deployment scripts
+deploy*.ps1
+deploy*.sh
+deploy-*.ps1
+deploy-*.sh
+run*.ps1
+run*.sh
+start*.ps1
+start*.sh
+
+# Prevent backup files
+*.backup
+*.bak
+*.old
+*.orig
+
+# Prevent test/development configs
+config_dev.*
+config_test.*
+.env.dev
+.env.test
