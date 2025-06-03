@@ -309,6 +309,11 @@ async def chat(req: ChatRequest):
         reply = result.content.strip()
         reply = memory_manager.inject_relevant_url(req.user_input, reply)
 
+        # ─── VERIFY URLs IN RESPONSE ────────────────────────────────────────────
+        if web_search and hasattr(web_search, 'verify_urls') and web_search.verify_urls:
+            from .tools.web_search_tool import verify_urls_in_response
+            reply = verify_urls_in_response(reply)
+
         memory.add_user_message(req.user_input)
         memory.add_ai_message(reply)
 

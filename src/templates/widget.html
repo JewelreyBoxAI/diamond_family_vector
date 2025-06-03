@@ -236,6 +236,45 @@
     .msg.bot .section {
       margin: 8px 0;
     }
+
+    /* URL Styling for proper display and interaction */
+    .msg.bot .url-container {
+      margin: 12px 0;
+      padding: 8px 0;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .msg.bot a {
+      color: #93c5fd;
+      text-decoration: underline;
+      word-wrap: break-word;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      display: inline-block;
+      max-width: 100%;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .msg.bot a:hover {
+      color: #dbeafe;
+      text-decoration: none;
+      background: rgba(255,255,255,0.1);
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .msg.bot a:visited {
+      color: #c7d2fe;
+    }
+
+    .msg.bot .link-prefix {
+      font-size: 14px;
+      margin-right: 8px;
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body>
@@ -298,17 +337,28 @@
         // Convert plain text response to ChatGPT-style structured HTML
         let formatted = text;
 
-        // Convert ### headers to bold text with line break before
+        // STEP 1: Handle URLs with proper formatting and spacing
+        // Detect URLs that are prefixed with emojis and text (like "🔗 You can explore that here:")
+        formatted = formatted.replace(/(🔗\s*[^:]*:\s*)(https?:\/\/[^\s]+)/gm, (match, prefix, url) => {
+          return `<div class="url-container"><span class="link-prefix">${prefix.trim()}</span><br><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></div>`;
+        });
+        
+        // Detect standalone URLs and make them clickable
+        formatted = formatted.replace(/(?<!href=["'])(https?:\/\/[^\s<>"]+)/gm, (url) => {
+          return `<div class="url-container"><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></div>`;
+        });
+
+        // STEP 2: Convert ### headers to bold text with line break before
         formatted = formatted.replace(/###\s*([^:\n]+):?/gm, '<br><span class="header">$1</span>');
         
         // Convert text headers (text followed by colon) to bold headers with line break
         formatted = formatted.replace(/\n([A-Z][^:\n]*):(?=\n)/gm, '<br><span class="header">$1:</span>');
         
-        // Handle **bold** and *italic* formatting
+        // STEP 3: Handle **bold** and *italic* formatting
         formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-        // Convert numbered lists
+        // STEP 4: Convert numbered lists
         formatted = formatted.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
         
         // Convert bullet points (various formats) - remove extra spacing
@@ -322,18 +372,18 @@
           return '<ul>' + cleanMatch + '</ul>';
         });
 
-        // Convert paragraph breaks but preserve single line breaks for better spacing
+        // STEP 5: Convert paragraph breaks but preserve single line breaks for better spacing
         formatted = formatted.replace(/\n\n+/g, '</p><p>');
         
-        // Handle single line breaks within content
-        formatted = formatted.replace(/\n(?!<)/g, '<br>');
+        // Handle single line breaks within content (but not within URL containers)
+        formatted = formatted.replace(/\n(?!<)(?!.*<\/div>)/g, '<br>');
         
         // Clean up multiple br tags and ensure proper spacing
         formatted = formatted.replace(/<br>\s*<br>/g, '<br>');
         formatted = formatted.replace(/^<br>/, ''); // Remove leading br
         
-        // Wrap content in paragraphs if needed
-        if (!formatted.includes('<span class="header">') && !formatted.includes('<ul>')) {
+        // STEP 6: Wrap content in paragraphs if needed (but not if it contains URL containers)
+        if (!formatted.includes('<span class="header">') && !formatted.includes('<ul>') && !formatted.includes('<div class="url-container">')) {
           formatted = '<p>' + formatted + '</p>';
         }
 

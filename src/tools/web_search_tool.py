@@ -1,7 +1,9 @@
 import os
 import requests
 import logging
+import re
 from typing import List, Dict, Any
+from urllib.parse import urlparse
 
 logger = logging.getLogger("jewelrybox_ai.websearch")
 logger.setLevel(logging.INFO)
@@ -78,12 +80,83 @@ def should_search_web(query: str) -> bool:
     lower = query.lower()
     return any(keyword in lower for keyword in JEWELRY_KEYWORDS)
 
+def verify_url(url: str, timeout: int = 5) -> Dict[str, Any]:
+    """
+    Verify if a URL is accessible and return status information.
+    Returns dict with 'accessible', 'status_code', and 'error' keys.
+    """
+    try:
+        # Parse URL to ensure it's valid
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return {"accessible": False, "status_code": None, "error": "Invalid URL format"}
+        
+        # Make HEAD request to check accessibility without downloading content
+        response = requests.head(url, timeout=timeout, allow_redirects=True)
+        
+        # Consider 2xx and 3xx status codes as accessible
+        accessible = 200 <= response.status_code < 400
+        
+        return {
+            "accessible": accessible,
+            "status_code": response.status_code,
+            "error": None if accessible else f"HTTP {response.status_code}"
+        }
+        
+    except requests.exceptions.Timeout:
+        return {"accessible": False, "status_code": None, "error": "Request timeout"}
+    except requests.exceptions.ConnectionError:
+        return {"accessible": False, "status_code": None, "error": "Connection failed"}
+    except requests.exceptions.RequestException as e:
+        return {"accessible": False, "status_code": None, "error": f"Request error: {str(e)}"}
+    except Exception as e:
+        return {"accessible": False, "status_code": None, "error": f"Unexpected error: {str(e)}"}
+
+def extract_urls_from_text(text: str) -> List[str]:
+    """Extract all URLs from text using regex."""
+    url_pattern = r'https?://[^\s<>"]+[^\s<>".,;!?]'
+    return re.findall(url_pattern, text)
+
+def verify_urls_in_response(response_text: str) -> str:
+    """
+    Verify all URLs in a response text and add status indicators.
+    Returns modified response with URL status indicators.
+    """
+    urls = extract_urls_from_text(response_text)
+    
+    if not urls:
+        return response_text
+    
+    logger.info(f"🔍 Verifying {len(urls)} URLs in response...")
+    modified_response = response_text
+    
+    for url in urls:
+        verification = verify_url(url)
+        
+        if verification["accessible"]:
+            logger.info(f"✅ URL verified: {url}")
+            # Add a checkmark indicator for verified URLs
+            modified_response = modified_response.replace(
+                url, 
+                f"{url} ✅"
+            )
+        else:
+            logger.warning(f"❌ URL verification failed: {url} - {verification['error']}")
+            # Add a warning indicator for inaccessible URLs
+            modified_response = modified_response.replace(
+                url,
+                f"{url} ⚠️ (Link may be temporarily unavailable)"
+            )
+    
+    return modified_response
+
 # ─── WEB SEARCH TOOL ────────────────────────────────────────────────────────────
 
 class WebSearchTool:
     """
     A minimal wrapper around the Tavily Web Search API.
     Ensures queries are safe and limits results to jewelry-relevant domains.
+    Includes URL verification capabilities.
     """
 
     BASE_URL = "https://api.tavily.com/search"
@@ -91,9 +164,10 @@ class WebSearchTool:
         "Content-Type": "application/json"
     }
 
-    def __init__(self, allowed_domains: List[str] = None):
+    def __init__(self, allowed_domains: List[str] = None, verify_urls: bool = True):
         self.allowed_domains = allowed_domains or ALLOWED_DOMAINS
         self.api_key = TAVILY_API_KEY
+        self.verify_urls = verify_urls
         
         if not self.api_key:
             raise EnvironmentError("❌ TAVILY_API_KEY is required for WebSearchTool")
@@ -157,10 +231,21 @@ class WebSearchTool:
             if len(snippet) > 150:
                 snippet = snippet[:150] + "..."
             
+            # Verify URL if verification is enabled
+            if self.verify_urls and url:
+                verification = verify_url(url)
+                if verification["accessible"]:
+                    url_display = f"{url} ✅"
+                else:
+                    url_display = f"{url} ⚠️"
+                    logger.warning(f"Search result URL verification failed: {url} - {verification['error']}")
+            else:
+                url_display = url
+            
             output_lines.append(f"{idx}. **{title}**")
             if snippet:
                 output_lines.append(f"   {snippet}")
-            output_lines.append(f"   Source: {url}")
+            output_lines.append(f"   Source: {url_display}")
             output_lines.append("")
 
         return "\n".join(output_lines) 
