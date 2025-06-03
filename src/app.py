@@ -62,6 +62,15 @@ from . import memory_manager
 logger = logging.getLogger("jewelrybox_ai")
 logger.setLevel(logging.INFO)
 
+# ─── WEB SEARCH TOOL IMPORT ───────────────────────────────────────────────────
+try:
+    from .tools.web_search_tool import WebSearchTool
+    WEB_SEARCH_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"WebSearchTool not available: {e}")
+    WebSearchTool = None
+    WEB_SEARCH_AVAILABLE = False
+
 # ─── PATHS & TEMPLATES ────────────────────────────────────────────────────────
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -139,6 +148,18 @@ except Exception as e:
     print(f"❌ OpenAI LLM initialization failed: {e}")
     print("💡 Please check your OPENAI_API_KEY is valid and has sufficient credits.")
     sys.exit(1)
+
+# ─── INITIALIZE WEB SEARCH TOOL ───────────────────────────────────────────────
+try:
+    if WEB_SEARCH_AVAILABLE and WebSearchTool:
+        web_search = WebSearchTool()
+        logger.info("✅ WebSearchTool initialized successfully.")
+    else:
+        web_search = None
+        logger.info("ℹ️ WebSearchTool unavailable - continuing with local knowledge only.")
+except Exception as e:
+    logger.error(f"Failed to initialize WebSearchTool: {e}")
+    web_search = None
 
 system_data = AGENT_ROLES["jewelry_ai"][0]["systemPrompt"]
 
@@ -269,11 +290,28 @@ def serialize_messages(messages: list[BaseMessage]):
 async def chat(req: ChatRequest):
     try:
         history = req.history or []
-        result = chain.invoke({"user_input": req.user_input, "history": history})
+        user_query = req.user_input.strip()
+
+        # ─── PERFORM WEB SEARCH ───────────────────────────────────────────────
+        if web_search:
+            search_results = web_search.search(user_query)
+            # Only prepend if we got actual results (not a warning or error string)
+            if search_results and not search_results.startswith("⚠️") and not search_results.startswith("❌") and not search_results.startswith("ℹ️") and not search_results.startswith("⏱️"):
+                # Inject live search context into the prompt
+                user_query = (
+                    f"[Live Web Search Results]\n{search_results}\n\n"
+                    f"[User Question]\n{user_query}"
+                )
+                logger.info(f"Web search results added to query for: {req.user_input[:50]}...")
+
+        # ─── INVOKE LLM WITH AUGMENTED INPUT ────────────────────────────────────
+        result = chain.invoke({"user_input": user_query, "history": history})
         reply = result.content.strip()
         reply = memory_manager.inject_relevant_url(req.user_input, reply)
+
         memory.add_user_message(req.user_input)
         memory.add_ai_message(reply)
+
         return JSONResponse({
             "reply": reply,
             "history": serialize_messages(memory.messages)
