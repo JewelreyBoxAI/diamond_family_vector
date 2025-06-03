@@ -50,10 +50,67 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
-# Documentation
-README.md
-*.md
+# ═══════════════════════════════════════════════════════════════
+# EXCLUDE UNWANTED DOCUMENTATION (keep only README.md, ARCHITECTURE.md, ISSUES_LOG.md)
+# ═══════════════════════════════════════════════════════════════
+
+# Temporary/draft documentation
+*_DRAFT.md
+*_draft.md
+*_TODO.md
+*_todo.md
+*_TEMP.md
+*_temp.md
+NOTES.md
+notes.md
+TODO.md
+todo.md
+
+# Development-only documentation
+DEBUG_*.md
+SETUP_*.md
+MIGRATION_*.md
+INTEGRATION_*.md
+FEATURES_*.md
+VOICE_*.md
+EMBEDDING_*.md
+ELEVENLABS_*.md
+DEPLOYMENT_*.md
+CONFIG_*.md
+SECURITY_*.md
+
+# Platform-specific deployment scripts
+deploy*.ps1
+deploy*.sh
+deploy-*.ps1
+deploy-*.sh
+run*.ps1
+run*.sh
+start*.ps1
+start*.sh
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+
+# Test/development configs
+config_dev.*
+config_test.*
+.env.dev
+.env.test
+.env.local
 
 # Logs
 logs/
-*.log 
+*.log
+
+# Temporary directories
+tmp/
+temp/
+.cache/
+
+# Keep only the 3 core documentation files - exclude everything else
+# (This is whitelist approach - we explicitly allow the 3 required files)
+# All other .md files are excluded by default patterns above 

@@ -95,6 +95,7 @@ NOTES.md
 notes.md
 TODO.md
 todo.md
+DRAFT*.md
 
 # Prevent development-only documentation
 DEBUG_*.md
@@ -105,6 +106,11 @@ FEATURES_*.md
 VOICE_*.md
 EMBEDDING_*.md
 ELEVENLABS_*.md
+DEPLOYMENT_*.md
+CONFIG_*.md
+SECURITY_*.md
+TROUBLESHOOT*.md
+REFACTOR*.md
 
 # Prevent platform-specific deployment scripts
 deploy*.ps1
@@ -115,15 +121,32 @@ run*.ps1
 run*.sh
 start*.ps1
 start*.sh
+setup*.ps1
+setup*.sh
+install*.ps1
+install*.sh
 
 # Prevent backup files
 *.backup
 *.bak
 *.old
 *.orig
+*~
 
 # Prevent test/development configs
 config_dev.*
 config_test.*
 .env.dev
 .env.test
+.env.example.local
+
+# Prevent temporary data files
+*.tmp
+*.temp
+.cache/*
+temp/*
+tmp/*
+
+# Prevent IDE workspace files
+*.code-workspace
+.cursorrules.backup

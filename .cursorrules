@@ -1,0 +1,168 @@
+# Global AI Assistant Rules for All Projects under @AI_src/
+
+## 📋 Required Documentation Structure
+Every project must maintain exactly **3 markdown files** - no more, no less:
+
+### 1. README.md
+- **Purpose**: User-facing documentation  
+- **Content**: Deployment instructions, basic usage, requirements, setup
+- **Audience**: End users, developers setting up the project
+- **Keep**: Concise, actionable, up-to-date
+
+### 2. ARCHITECTURE.md  
+- **Purpose**: Technical overview for developers and AI assistants
+- **Content**: 
+  - Technology stack and versions
+  - Key architectural decisions and rationale
+  - File/directory structure explanation
+  - Integration points and APIs
+  - Design patterns and conventions used
+  - Database schema (if applicable)
+  - Security considerations
+- **Audience**: Developers, AI assistants, technical stakeholders
+
+### 3. ISSUES_LOG.md
+- **Purpose**: Living knowledge base of problems and solutions
+- **Content**:
+  - Chronological log of significant issues and resolutions
+  - Exact error messages with working fixes
+  - Deployment gotchas and workarounds  
+  - Configuration edge cases
+  - Performance optimizations applied
+  - Dependencies issues and solutions
+- **Format**: `## [Date] Issue: Description` followed by solution
+- **Audience**: Future developers, AI assistants, troubleshooting
+
+## 🚫 Repository Cleanliness Rules
+
+### NEVER COMMIT:
+- ❌ Extra markdown files (DEBUG.md, SETUP.md, FEATURES.md, MIGRATION.md, etc.)
+- ❌ Platform-specific deployment scripts if Docker exists
+- ❌ Temporary documentation (NOTES.md, TODO.md, DRAFT.md, TEMP.md)
+- ❌ Development-only configs (.env.dev, config_test.json)
+- ❌ Backup files (*.backup, *.old, *.orig, *.bak)
+- ❌ IDE-specific files not in .gitignore
+- ❌ Log files or temporary data
+
+### ALWAYS MAINTAIN:
+- ✅ Clean .gitignore with comprehensive patterns
+- ✅ Production-ready code only
+- ✅ Environment variables for all configuration
+- ✅ Docker-first deployment approach
+
+## 🤖 AI Assistant Behavior Guidelines
+
+### Before Starting Work:
+1. **Read ARCHITECTURE.md** to understand project context, stack, and patterns
+2. **Check ISSUES_LOG.md** for similar problems and known solutions
+3. **Review README.md** for current project state and requirements
+
+### When Solving Problems:
+1. **Check ISSUES_LOG.md first** - don't reinvent solutions
+2. **Test solutions thoroughly** before suggesting
+3. **Update ISSUES_LOG.md** when resolving new significant issues
+4. **Reference exact error messages** and working fixes
+
+### When Making Changes:
+1. **Update ARCHITECTURE.md** when adding major features or changing stack
+2. **Update README.md** when changing setup/deployment process
+3. **Log resolution in ISSUES_LOG.md** for complex problems solved
+4. **Follow existing code patterns** documented in ARCHITECTURE.md
+
+### Communication Style:
+- **Be specific**: Provide exact commands, file paths, and error messages
+- **Be actionable**: Every suggestion should be immediately executable
+- **Be complete**: Include all necessary context and dependencies
+- **Reference documentation**: Point to relevant sections in the 3 core docs
+
+## 💻 Code Quality Standards
+
+### Environment & Configuration:
+- **Environment validation required** - fail fast with helpful error messages
+- **Graceful error handling** with user-friendly messages, not stack traces
+- **Optional dependencies** must have fallbacks (no silent failures)
+- **Configuration via environment variables** - no hardcoded values
+
+### Deployment & Production:
+- **Docker-first approach** - docker-compose.yml for local, Dockerfile for production
+- **Health checks included** in Docker containers
+- **Logging configured** with appropriate levels
+- **Resource limits defined** in production configs
+
+### Dependencies & Imports:
+- **Pin dependency versions** in requirements files
+- **Optional imports with try/catch** and graceful degradation
+- **Clear separation** between production and development dependencies
+- **Document any special installation requirements** in README.md
+
+## 🚀 Deployment Philosophy
+
+### Core Principles:
+- **"If Docker can handle it, don't script it"**
+- **Environment variables over config files**
+- **Single command deployment**: `docker-compose up -d`
+- **Platform agnostic** - works on any Docker-compatible system
+
+### Required Files:
+- `Dockerfile` - Production container definition
+- `docker-compose.yml` - Development and deployment orchestration
+- `.dockerignore` - Keep images lean
+- `.env.example` - Template for required environment variables
+
+### Forbidden Patterns:
+- Custom deployment scripts (deploy.sh, run.ps1, etc.)
+- Platform-specific setup instructions
+- Manual configuration steps
+- Hardcoded environment-specific values
+
+## 📝 Documentation Maintenance
+
+### When to Update ARCHITECTURE.md:
+- Adding new major features or services
+- Changing technology stack or major dependencies
+- Modifying database schema or API contracts
+- Implementing new security measures
+- Adding external integrations
+
+### When to Update ISSUES_LOG.md:
+- Resolving deployment issues
+- Fixing configuration problems  
+- Solving dependency conflicts
+- Optimizing performance bottlenecks
+- Working around external service limitations
+- Any issue that took >30 minutes to solve
+
+### When to Update README.md:
+- Changing setup/installation process
+- Adding new environment variables
+- Modifying deployment commands
+- Adding new user-facing features
+- Updating system requirements
+
+## 🎯 Project Success Criteria
+
+A well-maintained project under @AI_src/ should:
+- ✅ Have exactly 3 markdown files (README, ARCHITECTURE, ISSUES_LOG)
+- ✅ Deploy with a single Docker command
+- ✅ Include comprehensive environment validation
+- ✅ Have no hardcoded configuration values
+- ✅ Fail gracefully with helpful error messages
+- ✅ Be fully documented for both users and AI assistants
+
+## 🔍 Pre-Commit Checklist
+
+Before committing any changes:
+```bash
+# Check repository cleanliness
+ls *.md  # Should only show README.md, ARCHITECTURE.md, ISSUES_LOG.md
+git status  # Review what you're committing
+git diff --cached  # Review the actual changes
+
+# Verify no forbidden files
+ls deploy* 2>/dev/null || echo "Good - no deploy scripts"
+ls *_TEMP* *_DRAFT* 2>/dev/null || echo "Good - no temp files"
+```
+
+---
+
+**Philosophy**: *"Production-ready code with minimal, purposeful documentation. Everything else is noise."* 
