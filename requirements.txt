@@ -8,5 +8,6 @@ langchain>=0.0.350
 langchain-openai>=0.0.2
 langchain-core>=0.1.0
 langchain-community>=0.0.10
+# Optional: For semantic search functionality (app works without these)
 faiss-cpu>=1.7.0
 numpy>=1.24.0

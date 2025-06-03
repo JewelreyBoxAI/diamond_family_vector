@@ -1,24 +1,43 @@
 import os
-import faiss
 import json
 import numpy as np
-from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
-from langchain.schema import Document
-from langchain.retrievers.document_compressors import EmbeddingsFilter
 from typing import List, Tuple, Optional
 import logging
 
-# Logger setup
-logger = logging.getLogger("memory_manager")
+# Optional FAISS imports with fallback handling
+try:
+    import faiss
+    from langchain_community.vectorstores import FAISS
+    from langchain.schema import Document
+    from langchain.retrievers.document_compressors import EmbeddingsFilter
+    FAISS_AVAILABLE = True
+    logger = logging.getLogger("memory_manager")
+    logger.info("🔍 FAISS libraries available - semantic search enabled")
+except ImportError as e:
+    FAISS_AVAILABLE = False
+    logger = logging.getLogger("memory_manager")
+    logger.warning(f"🔍 FAISS libraries not available - using basic intent matching only: {e}")
+    # Create dummy classes to prevent import errors
+    class FAISS: pass
+    class Document: pass
+    class EmbeddingsFilter: pass
+
+from langchain_openai import OpenAIEmbeddings
 
 # ENV setup (✅ Lazy loading - check only when needed)
 def get_embeddings():
     """Get OpenAI embeddings with lazy API key validation"""
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     if not OPENAI_API_KEY:
-        raise ValueError("☠️ OPENAI_API_KEY not found in environment")
-    return OpenAIEmbeddings()
+        raise ValueError("☠️ OPENAI_API_KEY not found in environment variables")
+    
+    if not OPENAI_API_KEY.startswith("sk-"):
+        raise ValueError("☠️ OPENAI_API_KEY appears to be invalid (should start with 'sk-')")
+    
+    try:
+        return OpenAIEmbeddings()
+    except Exception as e:
+        raise ValueError(f"☠️ Failed to initialize OpenAI embeddings: {e}")
 
 # Init Embeddings lazily
 embedding_model = None
@@ -54,42 +73,62 @@ def load_documents_from_jsonl(path: str) -> List[Document]:
 # ----------------------------------------------------------------------------
 # INDEX BUILDER (merged logic from index_builder.py)
 # ----------------------------------------------------------------------------
-def build_faiss_index(docs: List[Document], index_path: str) -> FAISS:
+def build_faiss_index(docs: List[Document], index_path: str) -> Optional[FAISS]:
     """
     Create or overwrite a FAISS index from the given documents.
     Saves index to disk at index_path.
+    Returns None if FAISS is not available.
     """
-    embeddings = get_embeddings()
-    vectorstore = FAISS.from_documents(docs, embeddings)
-    vectorstore.save_local(index_path)
-    return vectorstore
+    if not FAISS_AVAILABLE:
+        logger.warning("Cannot build FAISS index - FAISS libraries not available")
+        return None
+    
+    try:
+        embeddings = get_embeddings()
+        vectorstore = FAISS.from_documents(docs, embeddings)
+        vectorstore.save_local(index_path)
+        return vectorstore
+    except Exception as e:
+        logger.error(f"Failed to build FAISS index: {e}")
+        return None
 
 # ----------------------------------------------------------------------------
 # SEMANTIC RETRIEVER WITH FALLBACKS
 # ----------------------------------------------------------------------------
 def load_faiss_index(index_path: str) -> Optional[FAISS]:
+    """Load FAISS index with availability check."""
+    if not FAISS_AVAILABLE:
+        logger.debug("FAISS not available - skipping index load")
+        return None
+        
     try:
         embeddings = get_embeddings()
         return FAISS.load_local(index_path, embeddings)
     except Exception as e:
-        print(f"☠️ Failed to load FAISS index: {e}")
+        logger.debug(f"Could not load FAISS index from {index_path}: {e}")
         return None
 
 def semantic_retrieve(query: str, index_path: str, k: int = 3, threshold: float = 0.75) -> List[Tuple[str, float]]:
     """
     Perform semantic search with optional reranking and fallback filtering.
+    Returns empty list if index doesn't exist (graceful fallback).
     """
-    index = load_faiss_index(index_path)
-    if not index:
+    try:
+        index = load_faiss_index(index_path)
+        if not index:
+            logger.info(f"🔍 FAISS index not found at {index_path}, using fallback intent matching")
+            return []
+
+        embeddings = get_embeddings()
+        compressor = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=threshold)
+        retriever = index.as_retriever(search_type="similarity", search_kwargs={"k": k})
+        retriever_with_filter = compressor | retriever
+
+        results = retriever_with_filter.get_relevant_documents(query)
+        return [(doc.page_content, doc.metadata.get("score", 0.0)) for doc in results]
+    except Exception as e:
+        logger.warning(f"Semantic search failed for {index_path}: {e}")
         return []
-
-    embeddings = get_embeddings()
-    compressor = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=threshold)
-    retriever = index.as_retriever(search_type="similarity", search_kwargs={"k": k})
-    retriever_with_filter = compressor | retriever
-
-    results = retriever_with_filter.get_relevant_documents(query)
-    return [(doc.page_content, doc.metadata.get("score", 0.0)) for doc in results]
 
 # ----------------------------------------------------------------------------
 # ROUTING BY SUBINDEX (optional hierarchical retrieval)
@@ -213,23 +252,28 @@ def smart_semantic_retrieve(query: str, k: int = 5, confidence_threshold: float 
     """
     Smart semantic retrieval with intent-based index routing and confidence filtering.
     Returns results only above confidence threshold with intent classification.
+    Gracefully handles missing indexes.
     """
-    # Classify intent to route to appropriate index
-    intent = get_contextual_intent(query)
-    index_path = get_route_index_path(intent)
-    
-    # Perform semantic search
-    results = semantic_retrieve(query, index_path, k=k, threshold=confidence_threshold)
-    
-    # If no high-confidence results, try broader search on default index
-    if not results or (results and max(score for _, score in results) < 0.8):
-        logger.info(f"🔄 Fallback search on default index for: {query}")
-        fallback_results = semantic_retrieve(query, "./indexes/default", k=k//2, threshold=0.6)
-        results.extend(fallback_results)
-    
-    # Sort by confidence and return top results
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results[:k]
+    try:
+        # Classify intent to route to appropriate index
+        intent = get_contextual_intent(query)
+        index_path = get_route_index_path(intent)
+        
+        # Perform semantic search
+        results = semantic_retrieve(query, index_path, k=k, threshold=confidence_threshold)
+        
+        # If no high-confidence results, try broader search on default index
+        if not results or (results and max(score for _, score in results) < 0.8):
+            logger.info(f"🔄 Fallback search on default index for: {query}")
+            fallback_results = semantic_retrieve(query, "./indexes/default", k=k//2, threshold=0.6)
+            results.extend(fallback_results)
+        
+        # Sort by confidence and return top results
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results[:k]
+    except Exception as e:
+        logger.warning(f"Smart semantic search failed: {e}")
+        return []
 
 # ----------------------------------------------------------------------------
 # DEBUG / TEST DRIVER
@@ -260,6 +304,7 @@ def inject_relevant_url_with_semantics(user_input: str, response: str, perform_s
     """
     Enhanced URL injection that performs semantic search for better accuracy.
     This is the recommended function for new implementations.
+    Gracefully falls back to basic intent matching if semantic search fails.
     """
     semantic_results = None
     
@@ -267,9 +312,13 @@ def inject_relevant_url_with_semantics(user_input: str, response: str, perform_s
         try:
             # Perform smart semantic retrieval
             semantic_results = smart_semantic_retrieve(user_input, k=3, confidence_threshold=0.75)
-            logger.info(f"🔍 Semantic search found {len(semantic_results)} results for: '{user_input}'")
+            if semantic_results:
+                logger.info(f"🔍 Semantic search found {len(semantic_results)} results for: '{user_input}'")
+            else:
+                logger.info(f"🔍 No semantic results found, using fallback intent matching for: '{user_input}'")
         except Exception as e:
-            logger.warning(f"Semantic search failed: {e}")
+            logger.warning(f"Semantic search failed, using fallback: {e}")
+            semantic_results = None
     
     return inject_fallback_if_needed(user_input, response, semantic_results)
 
