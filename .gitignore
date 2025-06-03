@@ -112,6 +112,9 @@ SECURITY_*.md
 TROUBLESHOOT*.md
 REFACTOR*.md
 
+# Allow essential protection guides
+!BRANCH_PROTECTION_GUIDE.md
+
 # Prevent platform-specific deployment scripts
 deploy*.ps1
 deploy*.sh
@@ -125,6 +128,10 @@ setup*.ps1
 setup*.sh
 install*.ps1
 install*.sh
+
+# Allow staging management scripts
+!staging-commands.ps1
+!staging-commands.sh
 
 # Prevent backup files
 *.backup
