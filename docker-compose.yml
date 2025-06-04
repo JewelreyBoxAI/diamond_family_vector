@@ -1,14 +1,17 @@
 version: '3.8'
 
 services:
-  jewelrybox-ai:
+  diamond-family-assistant:
     build: .
-    container_name: jewelrybox-ai-bot
+    container_name: diamond-family-assistant
     ports:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ALLOWED_ORIGINS=*
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - PORT=8000
+      - HOST=0.0.0.0
     env_file:
       - .env
     volumes:
@@ -22,8 +25,8 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - jewelrybox-network
+      - diamond-family-network
 
 networks:
-  jewelrybox-network:
+  diamond-family-network:
     driver: bridge 

@@ -1,4 +1,8 @@
-# 🚀 Staging Environment Commands for web-search branch testing (Windows PowerShell)
+# Diamond Family Assistant - Staging Environment Manager (PowerShell)
+#
+# Quick commands for staging environment management on Windows
+# Usage: .\staging-commands.ps1 [command]
+# Commands: start, stop, restart, logs, status, clean
 
 param(
     [Parameter(Mandatory=$true)]
@@ -6,7 +10,7 @@ param(
     [string]$Command
 )
 
-Write-Host "🧪 JewelryBox AI - Staging Environment Manager" -ForegroundColor Cyan
+Write-Host "🧪 Diamond Family Assistant - Staging Environment Manager" -ForegroundColor Cyan
 Write-Host "===============================================" -ForegroundColor Cyan
 
 switch ($Command) {

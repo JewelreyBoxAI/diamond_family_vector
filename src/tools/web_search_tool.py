@@ -5,7 +5,7 @@ import re
 from typing import List, Dict, Any
 from urllib.parse import urlparse
 
-logger = logging.getLogger("jewelrybox_ai.websearch")
+logger = logging.getLogger("diamond_family_ai.websearch")
 logger.setLevel(logging.INFO)
 
 # ─── CONFIG & GUARDRAILS ──────────────────────────────────────────────────────
@@ -15,19 +15,23 @@ if not TAVILY_API_KEY:
     logger.warning("TAVILY_API_KEY is missing from environment variables - web search will be disabled")
     TAVILY_API_KEY = None
 
-# Jewelry-focused allowlist of domains/topics
-ALLOWED_DOMAINS = [
-    "thediamondfamily.com",
-    "jewelryboxai.com",
+# Jewelry industry domain whitelist for security
+JEWELRY_DOMAINS = {
     "gia.edu",
-    "americangemsociety.org",
-    "jewelersofamerica.org",
-    "diamonds.pro",
-    "pricescope.com",
-    "bluenile.com",
-    "jamesallen.com",
-    "brilliantearth.com"
-]
+    "americangemsociety.org", 
+    "agta.org",
+    "jckonline.com",
+    "thediamondfamily.com",
+    "rjcresponsibility.org",
+    "kimberleyprocess.com",
+    "gemguide.com",
+    "rapaport.com",
+    "professional-jeweller.com",
+    "diamondfamilyai.com",  # Our own domain
+    "nationalyewelernetwork.com",
+    "jewelers.org",
+    "polygon.net"
+}
 
 DISALLOWED_KEYWORDS = [
     "hack",
@@ -165,7 +169,7 @@ class WebSearchTool:
     }
 
     def __init__(self, allowed_domains: List[str] = None, verify_urls: bool = True):
-        self.allowed_domains = allowed_domains or ALLOWED_DOMAINS
+        self.allowed_domains = allowed_domains or JEWELRY_DOMAINS
         self.api_key = TAVILY_API_KEY
         self.verify_urls = verify_urls
         

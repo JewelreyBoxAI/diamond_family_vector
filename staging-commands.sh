@@ -1,7 +1,7 @@
 #!/bin/bash
-# 🚀 Staging Environment Commands for web-search branch testing
+# Diamond Family Assistant - Staging Environment Manager
 
-echo "🧪 JewelryBox AI - Staging Environment Manager"
+echo "🧪 Diamond Family Assistant - Staging Environment Manager"
 echo "=============================================="
 
 case "$1" in

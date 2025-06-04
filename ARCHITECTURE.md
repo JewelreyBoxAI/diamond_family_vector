@@ -1,4 +1,6 @@
-# JewelryBoxAI Architecture
+# Diamond Family Assistant Architecture
+
+**Diamond Family Assistant** transforms jewelry retail through intelligent AI conversation, family business warmth, and cutting-edge technology.
 
 ## Technology Stack
 
@@ -173,8 +175,8 @@ docker-compose up -d  # Local development with hot reload
 
 ### Production
 ```bash
-docker build -t jewelrybox-ai .
-docker run -p 8000:8000 --env-file .env jewelrybox-ai
+docker build -t diamond-family-assistant .
+docker run -p 8000:8000 --env-file .env diamond-family-assistant
 ```
 
 ### Cloud Deployment

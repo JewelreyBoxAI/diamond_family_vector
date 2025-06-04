@@ -1,1 +1,1 @@
-# Tools package for JewelryBox AI 
+# Tools package for Diamond Family Assistant 

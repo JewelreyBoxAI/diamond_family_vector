@@ -1,10 +1,12 @@
-# 🧠 JewelryBox AI: SaaS-Capable Smart Concierge for Jewelry Retailers
+# 🧠 Diamond Family Assistant: SaaS-Capable Smart Concierge for Jewelry Retailers
 
-## 🚀 What It Is
+**Diamond Family Assistant** transforms jewelry retail with AI-powered, family-business warmth.
 
-JewelryBox AI is a **modular AI chatbot assistant** engineered specifically for high-end jewelry retailers. Built on a scalable, multi-layer architecture using **FAISS vector search**, **semantic retrieval**, and **contextual prompt injection**, it delivers precise, URL-linked responses to real customer queries—across product discovery, education, services, and promotions.
+Diamond Family Assistant is a **modular AI chatbot assistant** engineered specifically for high-end jewelry retailers. Built on a scalable, multi-layer architecture using **FAISS vector search**, **semantic retrieval**, and **dynamic memory management**, it delivers personalized, contextual guidance for customers while maintaining the authentic warmth of a family-owned business.
 
-This isn’t just a chatbot—it's an **AI concierge that mimics real staff behavior**, understands intent, and responds with tailored, resource-linked answers using natural language processing.
+## 🎯 **Core Features**
+
+This isn't just a chatbot—it's an **AI concierge that mimics real staff behavior**, understands intent, and responds with tailored, resource-linked answers using natural language processing.
 
 ---
 
@@ -67,7 +69,7 @@ This isn’t just a chatbot—it's an **AI concierge that mimics real staff beha
 
 ---
 
-## 🧰 What It’s Capable Of
+## 🧰 What It's Capable Of
 
 * ✅ Product discovery with direct linking (Diamonds, Designers, Rings)
 * ✅ Services FAQ and routing (Watch Repair, Appraisals, Resizing)
@@ -84,7 +86,7 @@ This isn’t just a chatbot—it's an **AI concierge that mimics real staff beha
 * **Zero hallucination design:** Built from the ground up to return what exists—not what sounds plausible
 * **Cross-domain reskinning:** Swap vector DB + prompts = New vertical, no rebuild
 * **Memory centralization:** Every call routes through `memory_manager.py`—clean, trackable, and scalable
-* **Built by engineers for engineers:** No dependency hell, modular by design, compliant with Rick's Law (If it’s not bulletproof, it doesn’t ship.)
+* **Built by engineers for engineers:** No dependency hell, modular by design, compliant with Rick's Law (If it's not bulletproof, it doesn't ship.)
 
 ---
 
@@ -103,76 +105,13 @@ This isn’t just a chatbot—it's an **AI concierge that mimics real staff beha
 
 > Want to clone this stack for your industry? Swap out the vector index, rewrite the prompt, and deploy. Done.
 
-
-
-
 ## Quick Start (Docker - Recommended)
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd JewelryBoxAI_Bot
+   git clone https://github.com/JewelreyBoxAI/diamond_family_vector.git
+   cd diamond_family_vector
    ```
 
 2. **Create environment file**
-   ```bash
-   # Create .env file with your OpenAI API key
-   echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
-   echo "ALLOWED_ORIGINS=*" >> .env
    ```
-
-3. **Deploy with Docker**
-   
-   **For Windows (PowerShell):**
-   ```powershell
-   .\deploy.ps1
-   ```
-   
-   **For Linux/Mac:**
-   ```bash
-   ./deploy.sh
-   ```
-   
-   **Or manually:**
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **Access the application**
-   - Main app: http://localhost:8000
-   - Chat widget: http://localhost:8000/widget
-
-## Alternative: Local Development Setup
-
-1. Install dependencies: `pip install -r requirements.txt`
-2. Set up your OpenAI API key in environment variables
-3. Run the application: `uvicorn src.app:app --reload`
-4. Visit `/widget` to interact with the chatbot
-
-## Configuration
-
-Create a `.env` file with your API keys:
-```
-OPENAI_API_KEY=your_openai_api_key_here
-ALLOWED_ORIGINS=*
-```
-
-## Docker Commands
-
-- **Start**: `docker-compose up -d`
-- **Stop**: `docker-compose down`
-- **View logs**: `docker-compose logs -f`
-- **Rebuild**: `docker-compose up -d --build`
-
-## Deployment
-
-This application is containerized and ready for deployment on any Docker-compatible platform including:
-- Local Docker
-- AWS ECS/Fargate
-- Google Cloud Run
-- Azure Container Instances
-- DigitalOcean App Platform
-
----
-
-*Built for luxury jewelry retailers who want to provide exceptional customer service through AI technology.*

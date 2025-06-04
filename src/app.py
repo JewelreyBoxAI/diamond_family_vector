@@ -56,7 +56,7 @@ from langchain.prompts import (
 
 # ─── ENV + LOGGING ───────────────────────────────────────────────────────────
 
-logger = logging.getLogger("jewelrybox_ai")
+logger = logging.getLogger("diamond_family_ai")
 logger.setLevel(logging.INFO)
 
 # ─── WEB SEARCH TOOL IMPORT ───────────────────────────────────────────────────
@@ -83,6 +83,85 @@ try:
 except FileNotFoundError:
     logger.error(f"Prompt file not found at {prompt_file}")
     sys.exit("Prompt configuration is missing. Aborting startup.")
+
+# ─── EXTRACT ALL PROMPT ARRAYS FOR DYNAMIC ACCESS ────────────────────────────
+
+system_data = AGENT_ROLES["jewelry_ai"][0]["systemPrompt"]
+
+# Create a comprehensive reference system for all arrays
+PROMPT_ARRAYS = {
+    "identity": system_data.get('identity', ''),
+    "role": system_data.get('role', ''),
+    "tone": system_data.get('tone', ''),
+    "description": system_data.get('description', []),
+    "knowledgeDomains": system_data.get('knowledgeDomains', []),
+    "customerServiceExcellence": system_data.get('customerServiceExcellence', []),
+    "pricingGuidance": system_data.get('pricingGuidance', []),
+    "careAndMaintenance": system_data.get('careAndMaintenance', []),
+    "giftGuidance": system_data.get('giftGuidance', []),
+    "signatureCloser": system_data.get('signatureCloser', []),
+    "tagline": system_data.get('tagline', ''),
+    "humanPrompt": system_data.get('humanPrompt', ''),
+    
+    # Anti-looping strategies
+    "antiLoopingPrinciples": system_data.get('antiLooping', {}).get('principles', []),
+    "antiLoopingTechniques": system_data.get('antiLooping', {}).get('variationTechniques', []),
+    "contextAwareness": system_data.get('antiLooping', {}).get('contextAwareness', []),
+    
+    # Style guides
+    "styleFormatting": system_data.get('styleGuide', {}).get('formatting', []),
+    "styleLanguage": system_data.get('styleGuide', {}).get('language', []),
+    "responsePrinciples": system_data.get('styleGuide', {}).get('responseStructure', {}).get('principles', []),
+    
+    # Diamond Family specific data
+    "currentLeadership": system_data.get('diamondFamilyExpertise', {}).get('foundingAndHistory', {}).get('currentLeadership', []),
+    "companyValues": system_data.get('diamondFamilyExpertise', {}).get('cultureAndMission', {}).get('values', []),
+    "affiliations": system_data.get('diamondFamilyExpertise', {}).get('corporateSizeAndConnections', {}).get('affiliations', []),
+    "charityInitiatives": system_data.get('diamondFamilyExpertise', {}).get('philanthropy', {}).get('initiatives', []),
+    "promotionDates": system_data.get('diamondFamilyExpertise', {}).get('recentNews', {}).get('dates', []),
+    "localCompetitors": system_data.get('diamondFamilyExpertise', {}).get('competition', {}).get('localCompetitors', []),
+    "nationalCompetitors": system_data.get('diamondFamilyExpertise', {}).get('competition', {}).get('nationalCompetitors', []),
+    "onlineCompetitors": system_data.get('diamondFamilyExpertise', {}).get('competition', {}).get('onlineCompetitors', []),
+    "inHouseServices": system_data.get('diamondFamilyExpertise', {}).get('uniqueSellingPoints', {}).get('inHouseServices', []),
+    
+    # Agent capabilities
+    "agentCapabilities": system_data.get('agentCapabilities', []),
+    
+    # Landmine categories
+    "landmineStrategy": system_data.get('landmineDetectionAndDiffusion', {}).get('strategy', ''),
+    "landmineCategories": system_data.get('landmineDetectionAndDiffusion', {}).get('categories', {}),
+}
+
+def get_prompt_array(array_name: str) -> list:
+    """
+    Dynamically access any prompt array by name.
+    Usage: get_prompt_array('knowledgeDomains') returns the knowledge domains list
+    """
+    return PROMPT_ARRAYS.get(array_name, [])
+
+def format_array_as_text(array_name: str, prefix: str = "• ") -> str:
+    """
+    Format a prompt array as readable text.
+    Usage: format_array_as_text('knowledgeDomains') returns formatted string
+    """
+    array_data = get_prompt_array(array_name)
+    if isinstance(array_data, list):
+        return "\n".join([f"{prefix}{item}" for item in array_data])
+    return str(array_data)
+
+def get_agent_responsibilities(agent_type: str) -> list:
+    """
+    Get responsibilities for a specific agent type.
+    Usage: get_agent_responsibilities('SalesAgent')
+    """
+    capabilities = get_prompt_array('agentCapabilities')
+    for agent in capabilities:
+        if agent.get('agent') == agent_type:
+            return agent.get('responsibilities', [])
+    return []
+
+# Log available arrays for debugging
+logger.info(f"Loaded {len(PROMPT_ARRAYS)} prompt arrays: {', '.join(PROMPT_ARRAYS.keys())}")
 
 # ─── LOAD KNOWLEDGEBASE CONFIG ───────────────────────────────────────────────
 
@@ -144,7 +223,7 @@ def get_cors_origins():
     logger.info(f"CORS origins configured: {origins}")
     return origins
 
-app = FastAPI(title="JewelryBox.AI Assistant")
+app = FastAPI(title="Diamond Family Assistant")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
@@ -178,8 +257,6 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize WebSearchTool: {e}")
     web_search = None
-
-system_data = AGENT_ROLES["jewelry_ai"][0]["systemPrompt"]
 
 # ─── INJECT DESIGNER LISTS ────────────────────────────────────────────────────
 
@@ -223,13 +300,33 @@ Leverage this knowledge base of URLs to reference the web address that best fits
 • Education: {URL_REFERENCE['website_urls']['education']}
 • Promotions: {URL_REFERENCE['website_urls']['promotions']}
 
+Available Knowledge Arrays (access when contextually relevant):
+
+Business Leadership: {', '.join(get_prompt_array('currentLeadership'))}
+Company Values: {', '.join(get_prompt_array('companyValues'))}
+In-House Services: {', '.join(get_prompt_array('inHouseServices'))}
+Customer Service Excellence: Available for detailed guidance
+Pricing Guidance: Available for value discussions
+Care & Maintenance: Available for product care advice
+Gift Guidance: Available for gift recommendations
+Anti-Looping Techniques: Available for conversation variation
+
+Competition Context:
+• Local: {', '.join(get_prompt_array('localCompetitors'))}
+• National: {', '.join(get_prompt_array('nationalCompetitors'))}
+• Online: {', '.join(get_prompt_array('onlineCompetitors'))}
+
+Agent Capabilities Available:
+{chr(10).join([f"• {agent.get('agent', '')}: {len(agent.get('responsibilities', []))} capabilities" for agent in get_prompt_array('agentCapabilities')])}
+
 URL Validation: If you include URLs in your response, they will be automatically validated through web search for accessibility.
 
 Business Context:
 • Location: {DIAMOND_KB.get('businessProfile', {}).get('primaryLocation', 'St. Louis')}
-• Family Business: Founded 1978 by Rocky Haddad, operated by Michael, Anthony, and Alex Haddad
+• Family Business: Founded 1978 by Rocky Haddad, operated by {', '.join(get_prompt_array('currentLeadership'))}
+• Tagline: {get_prompt_array('tagline')}
 
-Conversation Style: Be natural, helpful, and trust your judgment. Include relevant URLs when they genuinely help the customer.
+Conversation Style: Be natural, helpful, and trust your judgment. Include relevant URLs when they genuinely help the customer. Access knowledge arrays contextually when they add value to your response.
 
 {system_data['humanPrompt']}
 """
@@ -265,6 +362,31 @@ async def chat(req: ChatRequest):
         history = req.history or []
         user_query = req.user_input.strip()
 
+        # ─── ENHANCE QUERY WITH RELEVANT PROMPT ARRAYS ──────────────────────────
+        query_enhancements = []
+        
+        # Detect when specific knowledge would be helpful
+        user_lower = user_query.lower()
+        
+        if any(word in user_lower for word in ['service', 'repair', 'fix', 'maintenance', 'cleaning']):
+            query_enhancements.append(f"In-House Services: {format_array_as_text('inHouseServices')}")
+            
+        if any(word in user_lower for word in ['price', 'cost', 'budget', 'value', 'investment']):
+            query_enhancements.append(f"Pricing Guidance: {format_array_as_text('pricingGuidance')}")
+            
+        if any(word in user_lower for word in ['care', 'clean', 'maintain', 'storage', 'protect']):
+            query_enhancements.append(f"Care & Maintenance: {format_array_as_text('careAndMaintenance')}")
+            
+        if any(word in user_lower for word in ['gift', 'present', 'surprise', 'anniversary', 'birthday']):
+            query_enhancements.append(f"Gift Guidance: {format_array_as_text('giftGuidance')}")
+            
+        if any(word in user_lower for word in ['help', 'service', 'experience', 'customer']):
+            query_enhancements.append(f"Customer Service Excellence: {format_array_as_text('customerServiceExcellence')}")
+            
+        if any(word in user_lower for word in ['competition', 'competitor', 'compare', 'versus', 'vs']):
+            competitors = get_prompt_array('localCompetitors') + get_prompt_array('nationalCompetitors') + get_prompt_array('onlineCompetitors')
+            query_enhancements.append(f"Competition Context: Local/National/Online competitors include {', '.join(competitors)}")
+
         # ─── PERFORM WEB SEARCH ───────────────────────────────────────────────
         if web_search:
             search_results = web_search.search(user_query)
@@ -276,6 +398,12 @@ async def chat(req: ChatRequest):
                     f"[User Question]\n{user_query}"
                 )
                 logger.info(f"Web search results added to query for: {req.user_input[:50]}...")
+
+        # ─── ADD CONTEXTUAL KNOWLEDGE ARRAYS IF RELEVANT ────────────────────────
+        if query_enhancements:
+            enhanced_context = "\n\n[Relevant Knowledge Context]\n" + "\n\n".join(query_enhancements)
+            user_query = user_query + enhanced_context
+            logger.info(f"Added {len(query_enhancements)} knowledge arrays to query")
 
         # ─── INVOKE LLM WITH AUGMENTED INPUT ────────────────────────────────────
         result = chain.invoke({"user_input": user_query, "history": history})
@@ -344,6 +472,69 @@ async def favicon():
     favicon_path = os.path.join(ROOT, "images", "diamond.ico")
     return FileResponse(favicon_path, media_type="image/x-icon")
 
+# ─── DEBUG ENDPOINT FOR PROMPT ARRAYS ───────────────────────────────────────
+
+@app.get("/debug/prompt-arrays")
+async def debug_prompt_arrays():
+    """
+    Debug endpoint to view all available prompt arrays and their contents.
+    Useful for development and testing.
+    """
+    try:
+        debug_info = {}
+        for array_name, array_data in PROMPT_ARRAYS.items():
+            if isinstance(array_data, list):
+                debug_info[array_name] = {
+                    "type": "array",
+                    "count": len(array_data),
+                    "items": array_data[:3] if len(array_data) > 3 else array_data,  # Show first 3 items
+                    "truncated": len(array_data) > 3
+                }
+            else:
+                debug_info[array_name] = {
+                    "type": "string",
+                    "content": str(array_data)[:200] + "..." if len(str(array_data)) > 200 else str(array_data)
+                }
+        
+        return JSONResponse({
+            "total_arrays": len(PROMPT_ARRAYS),
+            "arrays": debug_info,
+            "note": "This endpoint is for development purposes only"
+        })
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Debug endpoint error"}
+        )
+
+@app.get("/debug/array/{array_name}")
+async def debug_specific_array(array_name: str):
+    """
+    Get a specific prompt array by name.
+    Usage: /debug/array/knowledgeDomains
+    """
+    try:
+        array_data = get_prompt_array(array_name)
+        if not array_data:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Array '{array_name}' not found"}
+            )
+        
+        return JSONResponse({
+            "array_name": array_name,
+            "type": "array" if isinstance(array_data, list) else "string",
+            "count": len(array_data) if isinstance(array_data, list) else 1,
+            "content": array_data
+        })
+    except Exception as e:
+        logger.error(f"Error accessing array {array_name}: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Error accessing array: {array_name}"}
+        )
+
 # ─── DEPLOYMENT RUNNER ───────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -352,7 +543,7 @@ if __name__ == "__main__":
     # Check if we're in CLI mode or server mode
     if len(sys.argv) > 1 and sys.argv[1] == "--cli":
         # CLI Test Mode
-        print("JewelryBox.AI CLI Test (type 'exit')")
+        print("Diamond Family Assistant CLI Test (type 'exit')")
         history = []
         while True:
             try:
@@ -360,7 +551,7 @@ if __name__ == "__main__":
                 if text.lower() in ("exit", "quit"): sys.exit(0)
                 res = chain.invoke({"user_input": text, "history": history})
                 reply = res.content.strip()
-                print("JewelryBox.AI:", reply)
+                print("Diamond Family Assistant:", reply)
                 memory.add_user_message(text)
                 memory.add_ai_message(reply)
                 history = memory.messages
@@ -373,7 +564,7 @@ if __name__ == "__main__":
         port = int(os.getenv("PORT", 8000))
         host = os.getenv("HOST", "0.0.0.0")
         
-        print(f"🚀 Starting JewelryBox.AI server on {host}:{port}")
+        print(f"🚀 Starting Diamond Family Assistant server on {host}:{port}")
         print(f"📋 Environment: {'Production' if port != 8000 else 'Development'}")
         
         uvicorn.run(

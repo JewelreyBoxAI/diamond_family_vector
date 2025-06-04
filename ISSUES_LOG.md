@@ -1,4 +1,4 @@
-## [2025-06-03] Issue: Web Search Integration for JewelryBox AI
+## [2025-06-03] Issue: Web Search Integration for Diamond Family Assistant
 
 **Problem**: Need to integrate Tavily web search API to provide real-time information while maintaining security guardrails and production stability.
 
