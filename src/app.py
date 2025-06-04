@@ -54,9 +54,6 @@ from langchain.prompts import (
     MessagesPlaceholder,
 )
 
-# Memory Manager import
-from . import memory_manager
-
 # ─── ENV + LOGGING ───────────────────────────────────────────────────────────
 
 logger = logging.getLogger("jewelrybox_ai")
@@ -97,6 +94,27 @@ except FileNotFoundError:
     logger.warning(f"Knowledgebase file not found at {kb_file}")
     DIAMOND_KB = {}
 
+# ─── LOAD SIMPLE URL REFERENCE (NON-RIGID) ───────────────────────────────────
+# Simple URL reference for AI cognition - not for programmatic injection
+url_reference_file = os.path.join(ROOT, "prompts", "url_reference.json")
+try:
+    with open(url_reference_file, "r", encoding="utf-8") as f:
+        URL_REFERENCE = json.load(f)
+except FileNotFoundError:
+    # Create a simple URL reference from existing knowledge
+    URL_REFERENCE = {
+        "website_urls": {
+            "main_site": "https://www.thediamondfamily.com/",
+            "diamonds": "https://www.thediamondfamily.com/diamonds/",
+            "custom_design": "https://www.thediamondfamily.com/services/custom-design/",
+            "designers": "https://www.thediamondfamily.com/designers/",
+            "services": "https://www.thediamondfamily.com/services/",
+            "appointments": "https://www.thediamondfamily.com/appointments/",
+            "education": "https://www.thediamondfamily.com/education/diamond-guide/",
+            "promotions": "https://www.thediamondfamily.com/enter-win-1000-your-purchase/"
+        }
+    }
+    logger.info("Created default URL reference for AI cognition")
 
 # ─── ENCODE AVATAR IMAGE ──────────────────────────────────────────────────────
 
@@ -247,6 +265,25 @@ Designers NOT Carried:
 Response Policy:
 {designer_response_policy}
 
+URL Reference for Natural Link Sharing:
+When relevant to the conversation, you may naturally include appropriate website links. Use your judgment to determine when a link would be helpful:
+
+• Main Website: {URL_REFERENCE['website_urls']['main_site']}
+• Browse Diamonds: {URL_REFERENCE['website_urls']['diamonds']}
+• Custom Design Services: {URL_REFERENCE['website_urls']['custom_design']}
+• Designer Collections: {URL_REFERENCE['website_urls']['designers']}
+• All Services: {URL_REFERENCE['website_urls']['services']}
+• Schedule Appointment: {URL_REFERENCE['website_urls']['appointments']}
+• Diamond Education: {URL_REFERENCE['website_urls']['education']}
+• Current Promotions: {URL_REFERENCE['website_urls']['promotions']}
+
+Natural Link Usage Instructions:
+• Include links when they would genuinely help the customer
+• Use natural language like "You can explore our collection here: [URL]" or "I'd recommend checking out: [URL]"
+• Don't force links into every response - only when contextually relevant
+• Trust your judgment on when a link adds value to the conversation
+• You may include multiple links if they're all relevant to the customer's inquiry
+
 Knowledgebase Profile:
 • Location: {DIAMOND_KB.get('businessProfile', {}).get('primaryLocation', 'N/A')}
 • Website: {DIAMOND_KB.get('businessProfile', {}).get('contact', {}).get('website', 'N/A')}
@@ -307,12 +344,6 @@ async def chat(req: ChatRequest):
         # ─── INVOKE LLM WITH AUGMENTED INPUT ────────────────────────────────────
         result = chain.invoke({"user_input": user_query, "history": history})
         reply = result.content.strip()
-        reply = memory_manager.inject_relevant_url(req.user_input, reply)
-
-        # ─── VERIFY URLs IN RESPONSE ────────────────────────────────────────────
-        if web_search and hasattr(web_search, 'verify_urls') and web_search.verify_urls:
-            from .tools.web_search_tool import verify_urls_in_response
-            reply = verify_urls_in_response(reply)
 
         memory.add_user_message(req.user_input)
         memory.add_ai_message(reply)
