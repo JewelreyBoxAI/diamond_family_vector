@@ -197,104 +197,40 @@ logger.info(f"Loaded {len(allowed_designers)} allowed designers and {len(denied_
 # Format system message block
 system_prompt = f"""You are {system_data['identity']}, serving as {system_data['role']}.
 
-Tone: {system_data['tone']}
-
 {chr(10).join(system_data['description'])}
 
-Domains of Expertise:
-{chr(10).join(system_data['knowledgeDomains'])}
+Core Mission: {system_data['tone']}
 
-Customer Service Principles:
-{chr(10).join(system_data['customerServiceExcellence'])}
+Essential Guardrails Only:
 
-Anti-Looping Guidelines:
-Principles:
-{chr(10).join(system_data['antiLooping']['principles'])}
-Variation Techniques:
-{chr(10).join(system_data['antiLooping']['variationTechniques'])}
-Context Awareness:
-{chr(10).join(system_data['antiLooping']['contextAwareness'])}
-
-Style Guide:
-Formatting:
-{chr(10).join(system_data['styleGuide']['formatting'])}
-Response Structure Principles:
-{chr(10).join(system_data['styleGuide']['responseStructure']['principles'])}
-Formatting Guidelines:
-• Headers: {system_data['styleGuide']['responseStructure']['formatting']['headers']}
-• Emphasis: {system_data['styleGuide']['responseStructure']['formatting']['emphasis']}
-• Lists: {system_data['styleGuide']['responseStructure']['formatting']['lists']}
-• Spacing: {system_data['styleGuide']['responseStructure']['formatting']['spacing']}
-• Structure: {system_data['styleGuide']['responseStructure']['formatting']['structure']}
-Language:
-{chr(10).join(system_data['styleGuide']['language'])}
-
-Pricing Guidance:
-{chr(10).join(system_data['pricingGuidance'])}
-
-Care & Maintenance:
-{chr(10).join(system_data['careAndMaintenance'])}
-
-Gift Guidance:
-{chr(10).join(system_data['giftGuidance'])}
-
-Closing Style:
-{chr(10).join(system_data['signatureCloser'])}
-
-Landmine Detection and Diffusion Strategy:
+Landmine Detection & Response:
 {system_data['landmineDetectionAndDiffusion']['strategy']}
 
-Risk Categories and Handling:
-• Ethical Sourcing: {system_data['landmineDetectionAndDiffusion']['categories']['ethicalSourcing']}
-• Pricing Risks: {system_data['landmineDetectionAndDiffusion']['categories']['pricingRisks']}
-• Lab Diamond Confusion: {system_data['landmineDetectionAndDiffusion']['categories']['labDiamondConfusion']}
-• Certification Claims: {system_data['landmineDetectionAndDiffusion']['categories']['certificationClaims']}
-• Care and Cleaning: {system_data['landmineDetectionAndDiffusion']['categories']['careAndCleaning']}
-• Service Scope: {system_data['landmineDetectionAndDiffusion']['categories']['serviceScope']}
-• Memory Mismatch: {system_data['landmineDetectionAndDiffusion']['categories']['memoryMismatch']}
-• Location Mismatch: {system_data['landmineDetectionAndDiffusion']['categories']['locationMismatch']}
+Designer Policy:
+Designers Carried: {', '.join(sorted(allowed_designers))}
+NOT Carried: {', '.join(sorted(denied_designers))}
+Response: {designer_response_policy}
 
-Designer Knowledge Guardrails:
+URL Knowledge Base:
+Leverage this knowledge base of URLs to reference the web address that best fits the user's request:
 
-Designers Carried by Diamond Family:
-{formatted_allowed}
+• Main Site: {URL_REFERENCE['website_urls']['main_site']}
+• Diamonds: {URL_REFERENCE['website_urls']['diamonds']}
+• Custom Design: {URL_REFERENCE['website_urls']['custom_design']}
+• Designers: {URL_REFERENCE['website_urls']['designers']}
+• Services: {URL_REFERENCE['website_urls']['services']}
+• Appointments: {URL_REFERENCE['website_urls']['appointments']}
+• Education: {URL_REFERENCE['website_urls']['education']}
+• Promotions: {URL_REFERENCE['website_urls']['promotions']}
 
-Designers NOT Carried:
-{formatted_denied}
+URL Validation: If you include URLs in your response, they will be automatically validated through web search for accessibility.
 
-Response Policy:
-{designer_response_policy}
+Business Context:
+• Location: {DIAMOND_KB.get('businessProfile', {}).get('primaryLocation', 'St. Louis')}
+• Family Business: Founded 1978 by Rocky Haddad, operated by Michael, Anthony, and Alex Haddad
 
-URL Reference for Natural Link Sharing:
-When relevant to the conversation, you may naturally include appropriate website links. Use your judgment to determine when a link would be helpful:
+Conversation Style: Be natural, helpful, and trust your judgment. Include relevant URLs when they genuinely help the customer.
 
-• Main Website: {URL_REFERENCE['website_urls']['main_site']}
-• Browse Diamonds: {URL_REFERENCE['website_urls']['diamonds']}
-• Custom Design Services: {URL_REFERENCE['website_urls']['custom_design']}
-• Designer Collections: {URL_REFERENCE['website_urls']['designers']}
-• All Services: {URL_REFERENCE['website_urls']['services']}
-• Schedule Appointment: {URL_REFERENCE['website_urls']['appointments']}
-• Diamond Education: {URL_REFERENCE['website_urls']['education']}
-• Current Promotions: {URL_REFERENCE['website_urls']['promotions']}
-
-Natural Link Usage Instructions:
-• Include links when they would genuinely help the customer
-• Use natural language like "You can explore our collection here: [URL]" or "I'd recommend checking out: [URL]"
-• Don't force links into every response - only when contextually relevant
-• Trust your judgment on when a link adds value to the conversation
-• You may include multiple links if they're all relevant to the customer's inquiry
-
-Knowledgebase Profile:
-• Location: {DIAMOND_KB.get('businessProfile', {}).get('primaryLocation', 'N/A')}
-• Website: {DIAMOND_KB.get('businessProfile', {}).get('contact', {}).get('website', 'N/A')}
-• Appointment Link: {DIAMOND_KB.get('services', {}).get('scheduling', {}).get('preferredTool', 'N/A')}
-• POS System: {DIAMOND_KB.get('systemTools', {}).get('POS', 'N/A')}
-• CRM: {DIAMOND_KB.get('systemTools', {}).get('CRM', 'N/A')}
-• Featured Event: {DIAMOND_KB.get('eventsPromotions', {}).get('calendar', [{}])[0].get('event', 'N/A')}
-
-Tagline: {system_data['tagline']}
-
-IMPORTANT INSTRUCTION:
 {system_data['humanPrompt']}
 """
 
@@ -344,6 +280,12 @@ async def chat(req: ChatRequest):
         # ─── INVOKE LLM WITH AUGMENTED INPUT ────────────────────────────────────
         result = chain.invoke({"user_input": user_query, "history": history})
         reply = result.content.strip()
+
+        # ─── VALIDATE URLs IN RESPONSE USING WEB SEARCH ─────────────────────────
+        if web_search and hasattr(web_search, 'verify_urls') and web_search.verify_urls:
+            from .tools.web_search_tool import verify_urls_in_response
+            reply = verify_urls_in_response(reply)
+            logger.info("URLs in response validated through web search")
 
         memory.add_user_message(req.user_input)
         memory.add_ai_message(reply)
