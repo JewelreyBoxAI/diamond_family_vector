@@ -124,4 +124,54 @@
 - CSS word-wrapping prevents URL cut-offs effectively
 - Real-time URL verification improves user trust
 - Visual indicators help users understand link status
-- Proper spacing improves readability and user experience 
+- Proper spacing improves readability and user experience
+
+## [Jan 3, 2025] Issue: Need flexible URL sharing approach vs rigid conditional logic
+
+**Problem**: Original codebase had very rigid conditional logic around knowledge base URLs with complex multi-layered intent matching and programmatic URL injection through memory_manager.
+
+**Root Cause**: 
+- Complex conditional URL matching in `memory_manager.py` with multiple fallback layers
+- Rigid intent-based URL injection that didn't leverage AI's natural reasoning
+- Overly structured approach that limited AI's ability to contextually suggest relevant links
+
+**Solution Implemented**:
+- **Removed**: `memory_manager.inject_relevant_url()` programmatic injection
+- **Removed**: Rigid conditional logic and intent matching layers  
+- **Added**: URL reference directly in system prompt for AI cognition
+- **Added**: Natural language instructions for contextual link sharing
+- **Approach**: Trust AI to decide when/how to include relevant URLs based on conversation context
+
+**Code Changes**:
+```python
+# Before: Rigid programmatic injection
+reply = memory_manager.inject_relevant_url(req.user_input, reply)
+
+# After: AI cognition-based approach in system prompt
+URL_REFERENCE = {
+    "website_urls": {
+        "main_site": "https://www.thediamondfamily.com/",
+        "diamonds": "https://www.thediamondfamily.com/diamonds/",
+        # ... etc
+    }
+}
+# URLs provided to AI with natural usage instructions
+```
+
+**Testing Strategy**:
+- Created `open-logic` branch for flexible approach testing
+- Maintains web search functionality while simplifying URL logic  
+- Allows comparison between structured (main) vs flexible (open-logic) approaches
+
+**Expected Benefits**:
+- More natural URL inclusion based on conversation flow
+- Reduced complexity in codebase 
+- Better contextual relevance of shared links
+- AI can include multiple relevant links when appropriate
+
+**Monitoring**: 
+- Compare URL relevance and user engagement between branches
+- Assess if AI naturally includes appropriate links without programmatic forcing
+- Evaluate conversation flow and link utility
+
+**Status**: ✅ RESOLVED - URL enhancement complete with full verification 
