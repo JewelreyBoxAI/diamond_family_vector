@@ -300,6 +300,14 @@ Leverage this knowledge base of URLs to reference the web address that best fits
 • Education: {URL_REFERENCE['website_urls']['education']}
 • Promotions: {URL_REFERENCE['website_urls']['promotions']}
 
+URL Formatting Instructions:
+Use natural, conversational formatting for URLs. Examples:
+• GOOD: "You can explore our collection at The Diamond Family website: https://www.thediamondfamily.com/diamonds/"
+• GOOD: "Check out our designers online at https://www.thediamondfamily.com/designers/"
+• AVOID: "[The Diamond Family](https://www.thediamondfamily.com/)" 
+• AVOID: Any markdown bracket formatting around URLs
+• Include the business name naturally in text, then provide the clean URL
+
 Available Knowledge Arrays (access when contextually relevant):
 
 Business Leadership: {', '.join(get_prompt_array('currentLeadership'))}
