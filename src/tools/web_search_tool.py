@@ -123,8 +123,8 @@ def extract_urls_from_text(text: str) -> List[str]:
 
 def verify_urls_in_response(response_text: str) -> str:
     """
-    Verify all URLs in a response text and add status indicators.
-    Returns modified response with URL status indicators.
+    Verify all URLs in a response text and handle them naturally.
+    Returns modified response with natural URL handling.
     """
     urls = extract_urls_from_text(response_text)
     
@@ -139,18 +139,11 @@ def verify_urls_in_response(response_text: str) -> str:
         
         if verification["accessible"]:
             logger.info(f"✅ URL verified: {url}")
-            # Add a checkmark indicator for verified URLs
-            modified_response = modified_response.replace(
-                url, 
-                f"{url} ✅"
-            )
+            # Keep URLs as-is when they work - no need to add indicators
         else:
             logger.warning(f"❌ URL verification failed: {url} - {verification['error']}")
-            # Add a warning indicator for inaccessible URLs
-            modified_response = modified_response.replace(
-                url,
-                f"{url} ⚠️ (Link may be temporarily unavailable)"
-            )
+            # For inaccessible URLs, just keep them natural - don't add AI warnings
+            # The AI should handle this contextually in future responses
     
     return modified_response
 

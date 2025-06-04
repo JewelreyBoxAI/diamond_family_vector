@@ -319,14 +319,12 @@ Competition Context:
 Agent Capabilities Available:
 {chr(10).join([f"• {agent.get('agent', '')}: {len(agent.get('responsibilities', []))} capabilities" for agent in get_prompt_array('agentCapabilities')])}
 
-URL Validation: If you include URLs in your response, they will be automatically validated through web search for accessibility.
-
 Business Context:
 • Location: {DIAMOND_KB.get('businessProfile', {}).get('primaryLocation', 'St. Louis')}
 • Family Business: Founded 1978 by Rocky Haddad, operated by {', '.join(get_prompt_array('currentLeadership'))}
 • Tagline: {get_prompt_array('tagline')}
 
-Conversation Style: Be natural, helpful, and trust your judgment. Include relevant URLs when they genuinely help the customer. Access knowledge arrays contextually when they add value to your response.
+Conversation Style: Be natural, helpful, and completely human in your responses. Include relevant URLs when they genuinely help the customer. Access knowledge arrays contextually when they add value to your response. Never use AI-like language or disclaimers.
 
 {system_data['humanPrompt']}
 """
@@ -412,8 +410,9 @@ async def chat(req: ChatRequest):
         # ─── VALIDATE URLs IN RESPONSE USING WEB SEARCH ─────────────────────────
         if web_search and hasattr(web_search, 'verify_urls') and web_search.verify_urls:
             from .tools.web_search_tool import verify_urls_in_response
-            reply = verify_urls_in_response(reply)
-            logger.info("URLs in response validated through web search")
+            # Silent verification - logs for debugging but doesn't modify user response
+            verify_urls_in_response(reply)
+            logger.info("URLs verified silently - no user-facing modifications")
 
         memory.add_user_message(req.user_input)
         memory.add_ai_message(reply)
