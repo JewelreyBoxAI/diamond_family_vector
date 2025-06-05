@@ -1,6 +1,6 @@
 # Diamond Family Assistant Architecture
 
-**Diamond Family Assistant** transforms jewelry retail through intelligent AI conversation, family business warmth, and cutting-edge technology.
+**Diamond Family Assistant** transforms jewelry retail through intelligent AI conversation, family business warmth, and cutting-edge technology. At JCK Las Vegas 2025, it serves as Anthony Haddad's digital wingman—The AI Marketing Genius's secret weapon for industry networking and innovation demonstration.
 
 ## Technology Stack
 
@@ -27,6 +27,11 @@
 - **python-dotenv** 1.0.0+ - Environment variable management
 - **Base64 encoding** - Avatar image embedding
 
+### GoHighLevel Integration
+- **aiohttp** 3.9.0+ - HTTP client for MCP server communication
+- **GHL MCP Server** - External appointment scheduling service
+- **Async scheduling** - Non-blocking appointment creation
+
 ## Architectural Decisions
 
 ### 1. Dual-Layer Architecture
@@ -34,15 +39,15 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    FastAPI Web Layer                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Widget Endpoint  │  Chat API  │  Static Assets  │  Health │
+│  Widget  │  Chat API  │  Scheduling  │  Static  │  Health  │
 ├─────────────────────────────────────────────────────────────┤
 │                   AI Processing Layer                       │
 ├─────────────────────────────────────────────────────────────┤
 │  LangChain Chain  │  Memory Manager  │  Intent Matching    │
 ├─────────────────────────────────────────────────────────────┤
-│                   Optional Search Layer                     │
+│                 Integration Layer                           │
 ├─────────────────────────────────────────────────────────────┤
-│  FAISS Indexes   │  Semantic Search  │  Fallback Routing  │
+│  FAISS Search  │  Web Search  │  GHL MCP Client  │  URLs   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -62,6 +67,12 @@
 - Error boundaries with user-friendly messages
 - Fallback images and default configurations
 
+### 5. Expo Wingman Intelligence
+- **Contextual Awareness**: Real-time understanding of JCK Las Vegas 2025 environment
+- **Industry Networking**: Strategic conversation facilitation and relationship building
+- **Error Transformation**: Converts technical issues into demonstration opportunities
+- **Humor Integration**: Perfectly-timed industry jokes and networking conversation starters
+
 ## File Structure
 
 ```
@@ -69,8 +80,12 @@ src/
 ├── app.py                 # Main FastAPI application
 ├── memory_manager.py      # Semantic search and URL injection
 ├── __init__.py           # Package initialization
+├── tools/
+│   ├── ghl_mcp_client.py     # GoHighLevel MCP integration
+│   ├── web_search_tool.py    # Web search functionality
+│   └── test_ghl_integration.py # GHL integration tests
 ├── templates/
-│   └── widget.html       # Chat interface template
+│   └── widget.html       # Chat interface with appointment scheduling
 ├── images/
 │   ├── diamond.ico       # Favicon
 │   ├── male_avatar.png   # Bot avatar (base64 encoded)
@@ -112,10 +127,20 @@ Root Files:
 
 ### 3. Environment Variables
 ```bash
+# Required
 OPENAI_API_KEY=required    # Primary LLM access
+
+# Optional Web Configuration  
 ALLOWED_ORIGINS=optional   # CORS configuration (default: *)
 PORT=optional             # Server port (default: 8000)
 HOST=optional             # Server host (default: 0.0.0.0)
+
+# Optional GoHighLevel Integration
+GHL_MCP_SERVER_URL=optional        # GHL MCP server endpoint
+GHL_DEFAULT_CALENDAR_ID=optional   # Default appointment calendar
+GHL_CALENDAR_JEWELLER_ID=optional  # Jewelry appointments
+GHL_CALENDAR_AUDIT_ID=optional     # Appraisal appointments
+GHL_CALENDAR_BOOKCALL_ID=optional  # Consultation appointments
 ```
 
 ## Design Patterns
@@ -148,6 +173,40 @@ Global memory and LLM instances for demo simplicity
 - Base64 image embedding prevents external requests
 - Hardcoded business URLs prevent injection attacks
 - Rate limiting handled by OpenAI API
+
+## Expo Wingman Features
+
+### 1. JCK Las Vegas 2025 Intelligence
+- **Event Context**: June 6-9, 2025 at The Venetian Expo
+- **Anthony's Role**: CEO of JewelryBox AI & The AI Marketing Genius
+- **Mission**: Demonstrate AI innovation while building industry relationships
+
+### 2. Contextual Networking
+- **Exhibitor Recognition**: Identifies mentions of Grown Diamond Corporation, MID House of Diamonds
+- **Conversation Bridging**: Connects expo discussions to Diamond Family services
+- **Follow-up Coordination**: Schedules meetings around expo activities
+- **Relationship Mapping**: Maintains context from expo conversations
+
+### 3. Error Handling as Demo Strategy
+```python
+# Technical errors become networking opportunities
+"Perfect timing! This is exactly why we're pioneering AI in jewelry—
+imagine when this connection is live, I could create your contact record, 
+add our conversation notes, and schedule your follow-up visit to St. Louis 
+all while we're talking. That's the future Diamond Family is building."
+```
+
+### 4. Industry Humor Integration
+- **Diamond Clarity Jokes**: Context-appropriate grading humor
+- **Carat Weight References**: Networking conversation enhancers  
+- **Setting Puns**: "Setting" appointments and relationships
+- **Booth Traffic Observations**: Expo environment awareness
+
+### 5. Strategic AI Demonstration
+- **Live Innovation Showcase**: Real-time AI capabilities during conversations
+- **Future Vision Communication**: Explains seamless AI-powered customer experiences
+- **Technology Leadership**: Positions Diamond Family as industry innovators
+- **Competitive Differentiation**: Highlights unique AI integration approach
 
 ## Performance Characteristics
 
@@ -184,6 +243,80 @@ docker run -p 8000:8000 --env-file .env diamond-family-assistant
 - **Environment**: Variables configured in platform
 - **Health Check**: Built-in FastAPI health endpoint
 - **HTTPS**: Automatic SSL termination
+
+## GoHighLevel MCP Integration
+
+### Appointment Scheduling Architecture
+The system integrates with a GoHighLevel MCP (Model Context Protocol) server to automatically create contacts and schedule appointments.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 Diamond Family Assistant                    │
+├─────────────────────────────────────────────────────────────┤
+│  1. Customer expresses appointment interest                 │
+│  2. AI detects appointment intent + extracts contact info  │
+│  3. Frontend shows appointment form (auto-filled)          │
+│  4. Customer confirms/completes missing details            │
+├─────────────────────────────────────────────────────────────┤
+│                    GHL MCP Client                          │
+├─────────────────────────────────────────────────────────────┤
+│  • HTTP client to GHL MCP server                          │
+│  • Calendar selection logic (jewelry/audit/consultation)   │
+│  • Contact info extraction & validation                    │
+│  • Conversation summary generation                         │
+├─────────────────────────────────────────────────────────────┤
+│                  GHL MCP Server                            │
+├─────────────────────────────────────────────────────────────┤
+│  • Creates contact in GoHighLevel                         │
+│  • Adds conversation notes to contact                      │
+│  • Schedules appointment on appropriate calendar           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+#### 1. GHLMCPClient (`src/tools/ghl_mcp_client.py`)
+- **Purpose**: HTTP client for communicating with GHL MCP server
+- **Features**: 
+  - Async HTTP requests with timeout handling
+  - Calendar selection based on conversation context
+  - Appointment time suggestion logic
+  - Error handling and retry logic
+
+#### 2. CustomerInfoExtractor
+- **Purpose**: Extract customer contact information from conversations
+- **Features**:
+  - Regex-based email/phone extraction
+  - Conversation summary generation
+  - Name detection (manual input required)
+
+#### 3. GHLAppointmentScheduler
+- **Purpose**: High-level scheduling interface
+- **Features**:
+  - Validates required customer information
+  - Selects appropriate calendar based on appointment type
+  - Generates conversation summaries for GHL notes
+  - Handles scheduling errors gracefully
+
+### Calendar Selection Logic
+- **Jewelry Calendar**: Engagement rings, custom design, jewelry purchases
+- **Audit Calendar**: Appraisals, evaluations, assessments
+- **Consultation Calendar**: Design consultations, general meetings
+- **Default Calendar**: Fallback for unmatched conversation types
+
+### Frontend Integration
+The chat widget automatically:
+1. Detects appointment requests in conversation
+2. Shows appointment scheduling form when appropriate  
+3. Pre-fills extracted contact information
+4. Provides real-time scheduling feedback
+5. Confirms successful appointment creation
+
+### Error Handling
+- **MCP Server Unavailable**: Graceful degradation with manual contact instructions
+- **Invalid Contact Data**: Clear validation messages for missing fields
+- **Calendar Conflicts**: Server-side handling with alternative time suggestions
+- **Network Issues**: Timeout handling with retry options
 
 ## Extension Points
 

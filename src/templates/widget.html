@@ -32,8 +32,8 @@
 
     /* Button to toggle chat */
     #jewelry-chat-button {
-      width: 48px;
-      height: 48px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.9);
       border: 2px solid #3b82f6;
@@ -51,8 +51,8 @@
     }
 
     #jewelry-chat-button img {
-      width: 40px;
-      height: 40px;
+      width: 55px;
+      height: 55px;
       border-radius: 50%;
       transition: opacity 0.3s ease;
     }
@@ -64,7 +64,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      line-height: 1;
+      line-height: 3;
     }
 
     #jewelry-chat-button.chat-open img {
@@ -275,6 +275,71 @@
       margin-right: 8px;
       opacity: 0.9;
     }
+
+    /* Appointment scheduling styles */
+    .appointment-form {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 10px 0;
+      max-width: 100%;
+    }
+
+    .appointment-form h4 {
+      margin: 0 0 12px 0;
+      color: #1e3a8a;
+      font-size: 16px;
+    }
+
+    .appointment-form input {
+      width: 100%;
+      padding: 8px 12px;
+      margin: 6px 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .appointment-form button {
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 8px 4px 0 0;
+    }
+
+    .appointment-form button:hover {
+      background: linear-gradient(135deg, #1e40af, #2563eb);
+    }
+
+    .appointment-form button.cancel {
+      background: #64748b;
+    }
+
+    .appointment-form button.cancel:hover {
+      background: #475569;
+    }
+
+    .appointment-status {
+      background: #dcfce7;
+      border: 1px solid #16a34a;
+      color: #15803d;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    .appointment-status.error {
+      background: #fef2f2;
+      border-color: #dc2626;
+      color: #dc2626;
+    }
   </style>
 </head>
 <body>
@@ -411,6 +476,86 @@
         typing.style.display = show ? "block" : "none";
       }
 
+      // Appointment scheduling functionality
+      function createAppointmentForm(extractedInfo = {}) {
+        const formHTML = `
+          <div class="appointment-form">
+            <h4>💎 Schedule Your Appointment</h4>
+            <input type="text" id="appt-name" placeholder="Your Name" value="${extractedInfo.name || ''}" required>
+            <input type="email" id="appt-email" placeholder="Email Address" value="${extractedInfo.email || ''}" required>
+            <input type="tel" id="appt-phone" placeholder="Phone Number" value="${extractedInfo.phone || ''}" required>
+            <input type="datetime-local" id="appt-time" placeholder="Preferred Date & Time">
+            <button onclick="submitAppointment()">Schedule Appointment</button>
+            <button class="cancel" onclick="cancelAppointmentForm()">Cancel</button>
+          </div>
+        `;
+        
+        const div = document.createElement("div");
+        div.className = "msg bot";
+        div.innerHTML = formHTML;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        
+        // Set default time to tomorrow at 2 PM
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(14, 0, 0, 0);
+        document.getElementById('appt-time').value = tomorrow.toISOString().slice(0, 16);
+      }
+
+      window.submitAppointment = async function() {
+        const name = document.getElementById('appt-name').value.trim();
+        const email = document.getElementById('appt-email').value.trim();
+        const phone = document.getElementById('appt-phone').value.trim();
+        const preferredTime = document.getElementById('appt-time').value;
+
+        if (!name || !email || !phone) {
+          showAppointmentStatus('Please fill in all required fields (Name, Email, Phone)', true);
+          return;
+        }
+
+        try {
+          showTyping(true);
+          const res = await fetch('/schedule_appointment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer_name: name,
+              customer_email: email,
+              customer_phone: phone,
+              preferred_time: preferredTime,
+              conversation_messages: history
+            })
+          });
+
+          const data = await res.json();
+          
+          if (data.success) {
+            showAppointmentStatus(`✅ Your appointment has been scheduled successfully! Appointment details: ${data.appointment_time}`);
+            cancelAppointmentForm();
+          } else {
+            showAppointmentStatus(`❌ ${data.error}`, true);
+          }
+        } catch (e) {
+          showAppointmentStatus('❌ Failed to schedule appointment. Please try again or contact us directly.', true);
+        } finally {
+          showTyping(false);
+        }
+      }
+
+      window.cancelAppointmentForm = function() {
+        const forms = document.querySelectorAll('.appointment-form');
+        forms.forEach(form => form.parentElement.remove());
+      }
+
+      function showAppointmentStatus(message, isError = false) {
+        const div = document.createElement("div");
+        div.className = "msg bot";
+        div.innerHTML = `<div class="appointment-status ${isError ? 'error' : ''}">${message}</div>`;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
       async function postMessage() {
         const txt = input.value.trim();
         if (!txt) return;
@@ -429,6 +574,14 @@
           renderMsg(data.reply, "bot");
           history = data.history;
           localStorage.setItem("jewelry_bot_history", JSON.stringify(history));
+          
+          // Check if appointment scheduling was detected
+          if (data.appointment_context && data.appointment_context.detected && data.appointment_context.scheduling_available) {
+            // Add appointment form if contact info is available or partially available
+            setTimeout(() => {
+              createAppointmentForm(data.appointment_context.extracted_info);
+            }, 500);
+          }
         } catch (e) {
           renderMsg("⚠️ Error contacting bot.", "bot");
         } finally {

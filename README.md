@@ -1,12 +1,49 @@
-# 🧠 Diamond Family Assistant: SaaS-Capable Smart Concierge for Jewelry Retailers
+# 🧠 Diamond Family Assistant: Anthony's Digital Wingman at JCK Las Vegas 2025
 
-**Diamond Family Assistant** transforms jewelry retail with AI-powered, family-business warmth.
+**Diamond Family Assistant** transforms jewelry retail with AI-powered, family-business warmth—now enhanced as The AI Marketing Genius's strategic expo partner.
 
 Diamond Family Assistant is a **modular AI chatbot assistant** engineered specifically for high-end jewelry retailers. Built on a scalable, multi-layer architecture using **FAISS vector search**, **semantic retrieval**, and **dynamic memory management**, it delivers personalized, contextual guidance for customers while maintaining the authentic warmth of a family-owned business.
 
 ## 🎯 **Core Features**
 
 This isn't just a chatbot—it's an **AI concierge that mimics real staff behavior**, understands intent, and responds with tailored, resource-linked answers using natural language processing.
+
+### 🤖 Intelligent AI Assistant & Expo Wingman
+- **GPT-4o-mini powered** conversational AI with jewelry expertise
+- **Anthony's Digital Wingman** - strategic partner for JCK Las Vegas 2025 networking
+- **JCK Expo Intelligence** - contextual awareness of June 6-9, 2025 at The Venetian Expo
+- **Industry Networking Support** - relationship building and conversation facilitation
+- **Error-to-Demo Transformation** - turns technical issues into AI innovation showcases
+- **Dynamic knowledge arrays** - pricing guidance, care instructions, gift recommendations
+- **Real-time web search** integration for up-to-date information
+- **Context-aware responses** with business-specific knowledge
+
+### 💎 Diamond Family Expertise
+- Comprehensive knowledge of diamonds, gemstones, and jewelry
+- Custom design consultation and guidance
+- Jewelry care and maintenance advice
+- Gift recommendations for special occasions
+- Competitive market awareness
+
+### 📅 Appointment Scheduling (NEW)
+- **GoHighLevel CRM integration** via MCP server
+- **Intelligent appointment detection** in conversations
+- **Automatic contact creation** with conversation notes
+- **Smart calendar selection** based on appointment type:
+  - Jewelry consultations (rings, custom design)
+  - Appraisal appointments (evaluations, assessments)
+  - General consultations (design meetings)
+- **Real-time scheduling** with form auto-population
+
+### 🌐 Professional Chat Interface & Expo Demo Platform
+- Modern, responsive chat widget design perfect for expo demonstrations
+- **Live AI Innovation Showcase** - real-time demonstration of industry-leading technology
+- **Contextual Expo Awareness** - recognizes mentions of exhibitors and industry contacts
+- **Industry Humor Integration** - perfectly-timed jokes for networking conversations
+- **Clickable URLs** with proper formatting and verification
+- **Appointment scheduling forms** with real-time feedback
+- Mobile-friendly responsive design
+- Professional Diamond Family branding
 
 ---
 

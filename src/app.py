@@ -15,6 +15,15 @@ def validate_environment():
         "OPENAI_API_KEY": "OpenAI API key for chat completions and embeddings"
     }
     
+    # Optional GHL MCP variables - warn if missing but don't fail
+    optional_ghl_vars = {
+        "GHL_MCP_SERVER_URL": "GoHighLevel MCP server URL for appointment scheduling",
+        "GHL_DEFAULT_CALENDAR_ID": "Default GHL calendar ID",
+        "GHL_CALENDAR_JEWELLER_ID": "GHL jewelry appointment calendar ID",
+        "GHL_CALENDAR_AUDIT_ID": "GHL audit appointment calendar ID", 
+        "GHL_CALENDAR_BOOKCALL_ID": "GHL consultation calendar ID"
+    }
+    
     missing_vars = []
     for var_name, description in required_vars.items():
         if not os.getenv(var_name):
@@ -28,6 +37,16 @@ def validate_environment():
         )
         print(error_msg)
         sys.exit(1)
+    
+    # Check optional GHL variables
+    missing_ghl_vars = []
+    for var_name, description in optional_ghl_vars.items():
+        if not os.getenv(var_name):
+            missing_ghl_vars.append(f"  • {var_name}: {description}")
+    
+    if missing_ghl_vars:
+        print("⚠️  Warning: GoHighLevel MCP features will be disabled. Missing variables:")
+        print("\n".join(missing_ghl_vars))
     
     # Validate CORS origins format
     cors_origins = os.getenv("ALLOWED_ORIGINS", "")
@@ -67,6 +86,17 @@ except ImportError as e:
     logger.warning(f"WebSearchTool not available: {e}")
     WebSearchTool = None
     WEB_SEARCH_AVAILABLE = False
+
+# ─── GHL MCP TOOL IMPORT ──────────────────────────────────────────────────────
+try:
+    from .tools.ghl_mcp_client import GHLMCPClient, GHLAppointmentScheduler, CustomerInfoExtractor
+    GHL_MCP_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"GHL MCP Client not available: {e}")
+    GHLMCPClient = None
+    GHLAppointmentScheduler = None
+    CustomerInfoExtractor = None
+    GHL_MCP_AVAILABLE = False
 
 # ─── PATHS & TEMPLATES ────────────────────────────────────────────────────────
 
@@ -258,6 +288,24 @@ except Exception as e:
     logger.error(f"Failed to initialize WebSearchTool: {e}")
     web_search = None
 
+# ─── INITIALIZE GHL MCP CLIENT ────────────────────────────────────────────────
+try:
+    if GHL_MCP_AVAILABLE and GHLMCPClient and os.getenv("GHL_MCP_SERVER_URL"):
+        ghl_mcp_client = GHLMCPClient(os.getenv("GHL_MCP_SERVER_URL"))
+        ghl_scheduler = GHLAppointmentScheduler(ghl_mcp_client)
+        ghl_extractor = CustomerInfoExtractor()
+        logger.info("✅ GHL MCP Client initialized successfully.")
+    else:
+        ghl_mcp_client = None
+        ghl_scheduler = None  
+        ghl_extractor = None
+        logger.info("ℹ️ GHL MCP Client unavailable - appointment scheduling disabled.")
+except Exception as e:
+    logger.error(f"Failed to initialize GHL MCP Client: {e}")
+    ghl_mcp_client = None
+    ghl_scheduler = None
+    ghl_extractor = None
+
 # ─── INJECT DESIGNER LISTS ────────────────────────────────────────────────────
 
 designer_guardrails = DIAMOND_KB.get("productsDesigners", {}).get("guardrails", {}).get("designerVerification", {})
@@ -344,11 +392,19 @@ prompt_template = ChatPromptTemplate.from_messages([
 ])
 chain = prompt_template | llm
 
-# ─── REQUEST MODEL ────────────────────────────────────────────────────────────
+# ─── REQUEST MODELS ───────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
     user_input: str
     history: list
+
+class AppointmentRequest(BaseModel):
+    customer_name: str
+    customer_email: str
+    customer_phone: str
+    preferred_time: str = None
+    appointment_type: str = "consultation"
+    conversation_messages: list = []
 
 # ─── ROOT REDIRECT ───────────────────────────────────────────────────────────
 
@@ -368,12 +424,33 @@ async def chat(req: ChatRequest):
         history = req.history or []
         user_query = req.user_input.strip()
 
+        # ─── DETECT APPOINTMENT REQUESTS ─────────────────────────────────────────
+        appointment_indicators = [
+            'appointment', 'schedule', 'meeting', 'visit', 'come in',
+            'book', 'reserve', 'consultation', 'see you', 'meet'
+        ]
+        
+        user_lower = user_query.lower()
+        is_appointment_request = any(indicator in user_lower for indicator in appointment_indicators)
+        
+        # ─── EXTRACT CONTACT INFO IF APPOINTMENT REQUESTED ──────────────────────
+        appointment_context = {}
+        if is_appointment_request and ghl_extractor:
+            # Look for contact info in current message and recent history
+            conversation_text = user_query
+            if history:
+                recent_messages = history[-5:] if len(history) > 5 else history
+                conversation_text += " " + " ".join([msg.get("content", "") for msg in recent_messages])
+            
+            extracted_info = ghl_extractor.extract_contact_info(conversation_text)
+            appointment_context.update(extracted_info)
+            
+            logger.info(f"Appointment request detected. Extracted info: {extracted_info}")
+
         # ─── ENHANCE QUERY WITH RELEVANT PROMPT ARRAYS ──────────────────────────
         query_enhancements = []
         
         # Detect when specific knowledge would be helpful
-        user_lower = user_query.lower()
-        
         if any(word in user_lower for word in ['service', 'repair', 'fix', 'maintenance', 'cleaning']):
             query_enhancements.append(f"In-House Services: {format_array_as_text('inHouseServices')}")
             
@@ -392,6 +469,11 @@ async def chat(req: ChatRequest):
         if any(word in user_lower for word in ['competition', 'competitor', 'compare', 'versus', 'vs']):
             competitors = get_prompt_array('localCompetitors') + get_prompt_array('nationalCompetitors') + get_prompt_array('onlineCompetitors')
             query_enhancements.append(f"Competition Context: Local/National/Online competitors include {', '.join(competitors)}")
+
+        # ─── ADD APPOINTMENT CAPABILITY CONTEXT ─────────────────────────────────
+        if is_appointment_request and ghl_scheduler:
+            ghl_status = "✅ Available" if ghl_scheduler else "❌ Unavailable"
+            query_enhancements.append(f"Appointment Scheduling: {ghl_status}. You can help customers schedule appointments and will collect their contact information (name, email, phone) for booking.")
 
         # ─── PERFORM WEB SEARCH ───────────────────────────────────────────────
         if web_search:
@@ -415,6 +497,25 @@ async def chat(req: ChatRequest):
         result = chain.invoke({"user_input": user_query, "history": history})
         reply = result.content.strip()
 
+        # ─── ENHANCE REPLY WITH APPOINTMENT SCHEDULING INFO ─────────────────────
+        if is_appointment_request:
+            if ghl_scheduler:
+                if appointment_context.get("email") and appointment_context.get("phone"):
+                    # We have contact info, suggest scheduling
+                    reply += f"\n\n💎 I can help you schedule that appointment right away! I have your email ({appointment_context['email']}) and phone ({appointment_context['phone']}). Would you like me to book a consultation for you?"
+                else:
+                    # Missing contact info, request it
+                    missing_info = []
+                    if not appointment_context.get("email"):
+                        missing_info.append("email address")
+                    if not appointment_context.get("phone"):
+                        missing_info.append("phone number")
+                    
+                    reply += f"\n\n💎 I'd be happy to schedule an appointment for you! To get you booked, I'll need your {' and '.join(missing_info)}. Could you please provide that information?"
+            else:
+                # No GHL scheduler - turn into expo demo opportunity
+                reply += f"\n\n💎 Perfect timing! You're seeing exactly what Anthony Haddad means by 'AI Marketing Genius'—imagine when our GHL integration is fully live, I could create your contact record, log our conversation, and book your Diamond Family appointment all while we're talking. That's the future we're building at JCK 2025. For now, let me connect you with our St. Louis showroom directly!"
+
         # ─── VALIDATE URLs IN RESPONSE USING WEB SEARCH ─────────────────────────
         if web_search and hasattr(web_search, 'verify_urls') and web_search.verify_urls:
             from .tools.web_search_tool import verify_urls_in_response
@@ -425,15 +526,94 @@ async def chat(req: ChatRequest):
         memory.add_user_message(req.user_input)
         memory.add_ai_message(reply)
 
-        return JSONResponse({
+        # ─── PREPARE RESPONSE WITH APPOINTMENT CONTEXT ──────────────────────────
+        response_data = {
             "reply": reply,
             "history": serialize_messages(memory.messages)
-        })
+        }
+        
+        # Add appointment scheduling context if available
+        if is_appointment_request and appointment_context:
+            response_data["appointment_context"] = {
+                "detected": True,
+                "extracted_info": appointment_context,
+                "scheduling_available": ghl_scheduler is not None
+            }
+
+        return JSONResponse(response_data)
     except Exception as e:
         logger.error(f"Error in /chat: {e}", exc_info=True)
+        # Turn technical errors into expo conversation opportunities
+        expo_error_messages = [
+            "Looks like my AI circuits are getting a workout at JCK! This is exactly the kind of innovation Anthony demonstrates at expos—when it works perfectly, it's magic. When it has a hiccup, it shows we're pushing boundaries. Let me reset and we'll keep the conversation flowing!",
+            "Ha! Even AI assistants have their expo moments. This technical glitch actually highlights what makes Diamond Family special—we're pioneering tech that other jewelers won't touch for years. Anthony calls this 'being comfortably uncomfortable with innovation.' Give me one more try!",
+            "Perfect demo moment! This is why Anthony Haddad is known as The AI Marketing Genius—we're literally stress-testing the future of jewelry retail at JCK 2025. When this tech is dialed in, conversations flow seamlessly from chat to contact creation to appointment booking. Let's restart!"
+        ]
+        import random
+        error_message = random.choice(expo_error_messages)
+        
         return JSONResponse(
             status_code=500,
-            content={"error": "An internal error occurred. Please try again later."}
+            content={"error": error_message}
+        )
+
+# ─── APPOINTMENT SCHEDULING ENDPOINT ─────────────────────────────────────────
+
+@app.post("/schedule_appointment")
+async def schedule_appointment(req: AppointmentRequest):
+    """
+    Schedule an appointment via GoHighLevel MCP server.
+    Creates contact, adds conversation notes, and schedules on appropriate calendar.
+    """
+    try:
+        if not ghl_scheduler:
+            # Turn the service unavailability into a demo opportunity
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "error": "Perfect timing! This is exactly why Anthony Haddad is pioneering AI in jewelry retail. While our GHL integration is getting polished up for the expo, imagine when this is live—I'd create your contact record, add our conversation notes, and book your appointment at Diamond Family all while we're chatting. This is the cutting-edge tech that makes us The AI Marketing Geniuses. For now, let's connect you directly with our St. Louis showroom!"
+                }
+            )
+        
+        # Schedule the appointment
+        result = await ghl_scheduler.schedule_from_conversation(
+            conversation_messages=req.conversation_messages,
+            customer_name=req.customer_name,
+            customer_email=req.customer_email,
+            customer_phone=req.customer_phone,
+            preferred_time=req.preferred_time,
+            appointment_type=req.appointment_type
+        )
+        
+        if result["success"]:
+            logger.info(f"✅ Appointment scheduled successfully for {req.customer_name}")
+            return JSONResponse({
+                "success": True,
+                "message": f"Your appointment has been scheduled successfully!",
+                "appointment_time": result["appointment_time"],
+                "calendar_type": result["calendar_type"],
+                "details": result.get("result", {})
+            })
+        else:
+            logger.error(f"❌ Appointment scheduling failed: {result['error']}")
+            # Turn the technical error into a demonstration opportunity
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": f"You know what's brilliant? Even when our AI systems hit a speed bump, it shows you where the jewelry industry is headed. {result['error']} Once our GHL integration is running smooth, this whole process becomes seamless—contact creation, conversation logging, calendar scheduling, all automated. That's the Diamond Family difference Anthony talks about. Let me connect you with our team directly for now!"
+                }
+            )
+    except Exception as e:
+        logger.error(f"Error in /schedule_appointment: {e}", exc_info=True)
+        # Turn technical exceptions into expo demonstration moments
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": "Ha! Our cutting-edge tech is being a bit too cutting-edge right now. But honestly, this is exactly what makes JCK 2025 so exciting—we're pioneering AI that handles everything from customer conversations to appointment booking. When it's dialed in perfectly, it's like having a digital concierge that never sleeps. Anthony wasn't kidding about being The AI Marketing Genius! Let's get you connected with our St. Louis team the traditional way for now."
+            }
         )
 
 # ─── CLEAR CHAT ENDPOINT ──────────────────────────────────────────────────────
@@ -540,6 +720,47 @@ async def debug_specific_array(array_name: str):
         return JSONResponse(
             status_code=500,
             content={"error": f"Error accessing array: {array_name}"}
+        )
+
+@app.get("/debug/ghl-status")
+async def debug_ghl_status():
+    """
+    Debug endpoint to check GHL MCP integration status.
+    """
+    try:
+        ghl_env_vars = {
+            "GHL_MCP_SERVER_URL": os.getenv("GHL_MCP_SERVER_URL"),
+            "GHL_DEFAULT_CALENDAR_ID": os.getenv("GHL_DEFAULT_CALENDAR_ID"),
+            "GHL_CALENDAR_JEWELLER_ID": os.getenv("GHL_CALENDAR_JEWELLER_ID"),
+            "GHL_CALENDAR_AUDIT_ID": os.getenv("GHL_CALENDAR_AUDIT_ID"),
+            "GHL_CALENDAR_BOOKCALL_ID": os.getenv("GHL_CALENDAR_BOOKCALL_ID")
+        }
+        
+        # Mask sensitive values
+        masked_env_vars = {}
+        for key, value in ghl_env_vars.items():
+            if value:
+                if key == "GHL_MCP_SERVER_URL":
+                    masked_env_vars[key] = value[:20] + "..." if len(value) > 20 else value
+                else:
+                    masked_env_vars[key] = value[:8] + "..." if len(value) > 8 else value
+            else:
+                masked_env_vars[key] = None
+        
+        return JSONResponse({
+            "ghl_mcp_available": GHL_MCP_AVAILABLE,
+            "ghl_scheduler_initialized": ghl_scheduler is not None,
+            "ghl_client_initialized": ghl_mcp_client is not None,
+            "ghl_extractor_initialized": ghl_extractor is not None,
+            "environment_variables": masked_env_vars,
+            "calendar_mappings": ghl_mcp_client.calendar_mappings if ghl_mcp_client else None,
+            "note": "This endpoint is for development purposes only"
+        })
+    except Exception as e:
+        logger.error(f"Error in GHL debug endpoint: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "GHL debug endpoint error"}
         )
 
 # ─── DEPLOYMENT RUNNER ───────────────────────────────────────────────────────
