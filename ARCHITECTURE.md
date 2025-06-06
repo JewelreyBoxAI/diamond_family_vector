@@ -136,11 +136,7 @@ PORT=optional             # Server port (default: 8000)
 HOST=optional             # Server host (default: 0.0.0.0)
 
 # Optional GoHighLevel Integration
-GHL_MCP_SERVER_URL=optional        # GHL MCP server endpoint
-GHL_DEFAULT_CALENDAR_ID=optional   # Default appointment calendar
-GHL_CALENDAR_JEWELLER_ID=optional  # Jewelry appointments
-GHL_CALENDAR_AUDIT_ID=optional     # Appraisal appointments
-GHL_CALENDAR_BOOKCALL_ID=optional  # Consultation appointments
+GHL_MCP_SERVER_URL=optional        # GHL MCP server endpoint (default: http://localhost:8000)
 ```
 
 ## Design Patterns
@@ -273,36 +269,90 @@ The system integrates with a GoHighLevel MCP (Model Context Protocol) server to 
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### MCP Tools Available (9 Total)
+
+1. **get_contact_info** - Fetch contact details by ID
+2. **list_opportunities** - List all opportunities  
+3. **trigger_webhook** - Trigger custom workflow webhooks
+4. **get_pipeline_info** - Retrieve pipeline/funnel information
+5. **create_note** - Add notes to contacts
+6. **search_contacts** - Search contacts by email/phone
+7. **get_contact_activities** - Get contact activity history
+8. **create_opportunity** - Create new opportunities
+9. **create_contact_add_notes_schedule_appointment** - **Main booking tool**
+
+### Active Calendar Configuration
+
+| Calendar Type | ID | Purpose |
+|---|---|---|
+| Demo | `1a2FZj1zqXPbPnrElQD1` | General meetings & consultations |
+| Custom Jewelry Design | `1c0RCj9LXQr9iDQaDTn9` | Custom design appointments |
+| Appraisals | `7pRF2Il5lcRZIMBdSkBx` | Jewelry evaluation appointments |
+| Campaign | `CuOcD0x88h7NPvfub9` | Promotion-based bookings |
+
 ### Key Components
 
 #### 1. GHLMCPClient (`src/tools/ghl_mcp_client.py`)
-- **Purpose**: HTTP client for communicating with GHL MCP server
+- **Purpose**: HTTP client for communicating with GHL MCP server via protocol
 - **Features**: 
-  - Async HTTP requests with timeout handling
-  - Calendar selection based on conversation context
-  - Appointment time suggestion logic
-  - Error handling and retry logic
+  - Generic `call_mcp_tool()` method for all 9 MCP tools
+  - Smart calendar selection based on conversation context
+  - Calendar ID validation with fallback logic
+  - Enhanced error handling with expo-friendly messages
 
-#### 2. CustomerInfoExtractor
+#### 2. CustomerInfoExtractor (Enhanced)
 - **Purpose**: Extract customer contact information from conversations
 - **Features**:
-  - Regex-based email/phone extraction
-  - Conversation summary generation
-  - Name detection (manual input required)
+  - Enhanced regex patterns for name extraction
+  - Email/phone extraction with validation
+  - Conversation summary generation with length limits
+  - Improved pattern matching (stops at natural breaks)
 
-#### 3. GHLAppointmentScheduler
-- **Purpose**: High-level scheduling interface
+#### 3. GHLAppointmentScheduler (Updated)
+- **Purpose**: High-level scheduling interface with full MCP support
 - **Features**:
-  - Validates required customer information
-  - Selects appropriate calendar based on appointment type
-  - Generates conversation summaries for GHL notes
-  - Handles scheduling errors gracefully
+  - Contact search functionality (find existing customers)
+  - Opportunity creation for follow-ups
+  - Calendar type descriptions
+  - Enhanced error messaging for expo demonstrations
 
 ### Calendar Selection Logic
-- **Jewelry Calendar**: Engagement rings, custom design, jewelry purchases
-- **Audit Calendar**: Appraisals, evaluations, assessments
-- **Consultation Calendar**: Design consultations, general meetings
-- **Default Calendar**: Fallback for unmatched conversation types
+
+The system automatically selects the appropriate calendar based on conversation context:
+
+```python
+def select_calendar(self, conversation_context: str) -> str:
+    context_lower = conversation_context.lower()
+    
+    # Priority order (most specific first):
+    if any(word in context_lower for word in ['appraisal', 'appraise', 'evaluation', 'assessment', 'value', 'worth']):
+        return "7pRF2Il5lcRZIMBdSkBx"  # Appraisals
+    elif any(word in context_lower for word in ['custom', 'design', 'bespoke', 'personalized', 'unique']):
+        return "1c0RCj9LXQr9iDQaDTn9"  # Custom Jewelry Design
+    elif any(word in context_lower for word in ['campaign', 'promotion', 'special offer', 'deal']):
+        return "CuOcD0x88h7NPvfub9"    # Campaign
+    else:
+        return "1a2FZj1zqXPbPnrElQD1"  # Demo (default)
+```
+
+### Setup Instructions
+
+1. **Start MCP Server**:
+   ```bash
+   cd ghl_mcp_server
+   python mcp_server.py
+   # Server runs on http://localhost:8000
+   ```
+
+2. **Configure Environment**:
+   ```bash
+   export GHL_MCP_SERVER_URL=http://localhost:8000
+   ```
+
+3. **Test Integration**:
+   ```bash
+   python test_mcp_integration.py
+   ```
 
 ### Frontend Integration
 The chat widget automatically:

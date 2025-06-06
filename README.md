@@ -26,13 +26,15 @@ This isn't just a chatbot—it's an **AI concierge that mimics real staff behavi
 - Competitive market awareness
 
 ### 📅 Appointment Scheduling (NEW)
-- **GoHighLevel CRM integration** via MCP server
+- **GoHighLevel CRM integration** via MCP server protocol
+- **9 integrated MCP tools** for comprehensive CRM management
+- **4 active calendar types** with intelligent selection:
+  - **Demo Calendar** (`1a2FZj1zqXPbPnrElQD1`) - General meetings
+  - **Custom Jewelry Design** (`1c0RCj9LXQr9iDQaDTn9`) - Design consultations
+  - **Appraisals** (`7pRF2Il5lcRZIMBdSkBx`) - Evaluation appointments
+  - **Campaign** (`CuOcD0x88h7NPvfub9`) - Promotion-based bookings
 - **Intelligent appointment detection** in conversations
-- **Automatic contact creation** with conversation notes
-- **Smart calendar selection** based on appointment type:
-  - Jewelry consultations (rings, custom design)
-  - Appraisal appointments (evaluations, assessments)
-  - General consultations (design meetings)
+- **Automatic contact creation** with conversation notes and activity tracking
 - **Real-time scheduling** with form auto-population
 
 ### 🌐 Professional Chat Interface & Expo Demo Platform
@@ -150,5 +152,50 @@ This isn't just a chatbot—it's an **AI concierge that mimics real staff behavi
    cd diamond_family_vector
    ```
 
-2. **Create environment file**
+2. **Set up MCP Server (for GHL integration)**
+   ```bash
+   # Start the MCP server (in a separate terminal)
+   cd ghl_mcp_server
+   python mcp_server.py
+   # Server runs on http://localhost:8000
    ```
+
+3. **Create environment file**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your values:
+   ```
+   
+   **Required Variables:**
+   ```env
+   OPENAI_API_KEY=your_openai_api_key_here
+   GHL_MCP_SERVER_URL=http://localhost:8000
+   ```
+   
+   **Optional Variables:**
+   ```env
+   PORT=8000
+   HOST=0.0.0.0
+   ALLOWED_ORIGINS=*
+   ```
+
+4. **Deploy with Docker**
+   ```bash
+   # Development
+   docker-compose up -d
+   
+   # Production
+   docker-compose -f docker-compose.staging.yml up -d
+   ```
+
+5. **Access the application**
+   ```
+   http://localhost:8000/widget
+   ```
+
+## Testing MCP Integration
+
+Run the integration test to verify everything is working:
+
+```bash
+python test_mcp_integration.py

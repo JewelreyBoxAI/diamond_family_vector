@@ -16,7 +16,7 @@ if not TAVILY_API_KEY:
     TAVILY_API_KEY = None
 
 # Jewelry industry domain whitelist for security
-JEWELRY_DOMAINS = {
+JEWELRY_DOMAINS = [
     "gia.edu",
     "americangemsociety.org", 
     "agta.org",
@@ -31,7 +31,7 @@ JEWELRY_DOMAINS = {
     "nationalyewelernetwork.com",
     "jewelers.org",
     "polygon.net"
-}
+]
 
 DISALLOWED_KEYWORDS = [
     "hack",

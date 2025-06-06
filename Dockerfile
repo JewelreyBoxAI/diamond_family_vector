@@ -19,7 +19,7 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
 
 # Copy application code
 COPY src/ ./src/

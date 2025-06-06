@@ -96,10 +96,6 @@ def check_environment_variables():
     # Optional variables
     optional_vars = {
         'GHL_MCP_SERVER_URL': 'GoHighLevel MCP server URL',
-        'GHL_DEFAULT_CALENDAR_ID': 'Default GHL calendar ID',
-        'GHL_CALENDAR_JEWELLER_ID': 'GHL jewelry calendar ID',
-        'GHL_CALENDAR_AUDIT_ID': 'GHL audit calendar ID',
-        'GHL_CALENDAR_BOOKCALL_ID': 'GHL consultation calendar ID',
         'TAVILY_API_KEY': 'Tavily web search API key',
         'ALLOWED_ORIGINS': 'CORS allowed origins',
         'PORT': 'Server port',

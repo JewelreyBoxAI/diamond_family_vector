@@ -17,11 +17,7 @@ def validate_environment():
     
     # Optional GHL MCP variables - warn if missing but don't fail
     optional_ghl_vars = {
-        "GHL_MCP_SERVER_URL": "GoHighLevel MCP server URL for appointment scheduling",
-        "GHL_DEFAULT_CALENDAR_ID": "Default GHL calendar ID",
-        "GHL_CALENDAR_JEWELLER_ID": "GHL jewelry appointment calendar ID",
-        "GHL_CALENDAR_AUDIT_ID": "GHL audit appointment calendar ID", 
-        "GHL_CALENDAR_BOOKCALL_ID": "GHL consultation calendar ID"
+        "GHL_MCP_SERVER_URL": "GoHighLevel MCP server URL for appointment scheduling"
     }
     
     missing_vars = []
@@ -162,6 +158,33 @@ PROMPT_ARRAYS = {
     "landmineCategories": system_data.get('landmineDetectionAndDiffusion', {}).get('categories', {}),
 }
 
+# ─── LOAD KNOWLEDGEBASE CONFIG ───────────────────────────────────────────────
+
+kb_file = os.path.join(ROOT, "prompts", "diamond_family_kb.json")
+try:
+    with open(kb_file, "r", encoding="utf-8") as f:
+        DIAMOND_KB = json.load(f)["diamond_family_kb"]
+except FileNotFoundError:
+    logger.warning(f"Knowledgebase file not found at {kb_file}")
+    DIAMOND_KB = {}
+
+# ─── ADD EVENTS AND PROMOTIONS TO PROMPT ARRAYS ──────────────────────────────
+
+# Extract events and promotions from DIAMOND_KB and add to prompt arrays
+events_promotions = DIAMOND_KB.get('eventsPromotions', {})
+upcoming_events = events_promotions.get('calendar', [])
+current_offer = events_promotions.get('currentOffer', '')
+
+# Add to PROMPT_ARRAYS for easy access
+PROMPT_ARRAYS.update({
+    "upcomingEvents": upcoming_events,
+    "currentOffer": current_offer,
+    "businessHours": DIAMOND_KB.get('businessProfile', {}).get('hoursOfOperation', {}),
+    "teamMembers": DIAMOND_KB.get('team', {}).get('members', []),
+    "allowedDesigners": DIAMOND_KB.get('productsDesigners', {}).get('guardrails', {}).get('designerVerification', {}).get('allowedDesigners', []),
+    "deniedDesigners": DIAMOND_KB.get('productsDesigners', {}).get('guardrails', {}).get('designerVerification', {}).get('deniedDesigners', [])
+})
+
 def get_prompt_array(array_name: str) -> list:
     """
     Dynamically access any prompt array by name.
@@ -190,18 +213,39 @@ def get_agent_responsibilities(agent_type: str) -> list:
             return agent.get('responsibilities', [])
     return []
 
+def format_upcoming_events() -> str:
+    """Format upcoming events for AI response."""
+    events = get_prompt_array('upcomingEvents')
+    if not events:
+        return "No upcoming events scheduled."
+    
+    formatted_events = []
+    for event in events:
+        event_text = f"• **{event.get('event', 'Event')}**"
+        if event.get('dates'):
+            event_text += f" - {event.get('dates')}"
+        elif event.get('date'):
+            event_text += f" - {event.get('date')}"
+        
+        if event.get('location'):
+            event_text += f" ({event.get('location')})"
+        
+        if event.get('details'):
+            event_text += f": {event.get('details')}"
+        
+        formatted_events.append(event_text)
+    
+    return "\n".join(formatted_events)
+
+def get_current_promotions() -> str:
+    """Get current promotions and offers."""
+    current_offer = get_prompt_array('currentOffer')
+    if current_offer:
+        return f"Current Promotion: Win $1000 towards your purchase! Enter at {current_offer}"
+    return "Check our website for current promotions and offers."
+
 # Log available arrays for debugging
 logger.info(f"Loaded {len(PROMPT_ARRAYS)} prompt arrays: {', '.join(PROMPT_ARRAYS.keys())}")
-
-# ─── LOAD KNOWLEDGEBASE CONFIG ───────────────────────────────────────────────
-
-kb_file = os.path.join(ROOT, "prompts", "diamond_family_kb.json")
-try:
-    with open(kb_file, "r", encoding="utf-8") as f:
-        DIAMOND_KB = json.load(f)["diamond_family_kb"]
-except FileNotFoundError:
-    logger.warning(f"Knowledgebase file not found at {kb_file}")
-    DIAMOND_KB = {}
 
 # ─── LOAD SIMPLE URL REFERENCE (NON-RIGID) ───────────────────────────────────
 # Simple URL reference for AI cognition - not for programmatic injection
@@ -380,7 +424,16 @@ Business Context:
 • Family Business: Founded 1978 by Rocky Haddad, operated by {', '.join(get_prompt_array('currentLeadership'))}
 • Tagline: {get_prompt_array('tagline')}
 
-Conversation Style: Be natural, helpful, and completely human in your responses. Include relevant URLs when they genuinely help the customer. Access knowledge arrays contextually when they add value to your response. Never use AI-like language or disclaimers.
+Upcoming Events & Promotions:
+{format_upcoming_events()}
+
+Current Promotions:
+{get_current_promotions()}
+
+Business Hours:
+{chr(10).join([f"• {day}: {hours}" for day, hours in get_prompt_array('businessHours').items()]) if get_prompt_array('businessHours') else "• Contact us for current hours"}
+
+Conversation Style: Be natural, helpful, and completely human in your responses. Include relevant URLs when they genuinely help the customer. Access knowledge arrays contextually when they add value to your response. Never use AI-like language or disclaimers. Always mention upcoming events and current promotions when relevant to the conversation.
 
 {system_data['humanPrompt']}
 """
@@ -469,6 +522,20 @@ async def chat(req: ChatRequest):
         if any(word in user_lower for word in ['competition', 'competitor', 'compare', 'versus', 'vs']):
             competitors = get_prompt_array('localCompetitors') + get_prompt_array('nationalCompetitors') + get_prompt_array('onlineCompetitors')
             query_enhancements.append(f"Competition Context: Local/National/Online competitors include {', '.join(competitors)}")
+        
+        # ─── ADD EVENTS AND PROMOTIONS CONTEXT ───────────────────────────────────
+        if any(word in user_lower for word in ['event', 'events', 'promotion', 'sale', 'discount', 'special', 'offer', 'deal', 'campaign', 'upcoming']):
+            upcoming_events = format_upcoming_events()
+            current_promo = get_current_promotions()
+            query_enhancements.append(f"Upcoming Events:\n{upcoming_events}")
+            query_enhancements.append(f"Current Promotions: {current_promo}")
+        
+        # ─── ADD BUSINESS HOURS CONTEXT ───────────────────────────────────────────
+        if any(word in user_lower for word in ['hours', 'open', 'closed', 'when', 'time', 'schedule']):
+            business_hours = get_prompt_array('businessHours')
+            if business_hours:
+                hours_text = "\n".join([f"• {day}: {hours}" for day, hours in business_hours.items()])
+                query_enhancements.append(f"Business Hours:\n{hours_text}")
 
         # ─── ADD APPOINTMENT CAPABILITY CONTEXT ─────────────────────────────────
         if is_appointment_request and ghl_scheduler:
@@ -722,6 +789,32 @@ async def debug_specific_array(array_name: str):
             content={"error": f"Error accessing array: {array_name}"}
         )
 
+@app.get("/debug/events-promotions")
+async def debug_events_promotions():
+    """Debug endpoint to check events and promotions configuration."""
+    try:
+        events_debug = {
+            "upcomingEvents": get_prompt_array('upcomingEvents'),
+            "currentOffer": get_prompt_array('currentOffer'),
+            "formatted_events": format_upcoming_events(),
+            "formatted_promotions": get_current_promotions(),
+            "business_hours": get_prompt_array('businessHours'),
+            "diamond_kb_loaded": bool(DIAMOND_KB),
+            "events_promotions_section": DIAMOND_KB.get('eventsPromotions', {}),
+            "system_prompt_preview": {
+                "events_section": format_upcoming_events(),
+                "promotions_section": get_current_promotions()
+            }
+        }
+        
+        return JSONResponse(events_debug)
+    except Exception as e:
+        logger.error(f"Error in events/promotions debug endpoint: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Debug endpoint error: {str(e)}"}
+        )
+
 @app.get("/debug/ghl-status")
 async def debug_ghl_status():
     """
@@ -729,11 +822,7 @@ async def debug_ghl_status():
     """
     try:
         ghl_env_vars = {
-            "GHL_MCP_SERVER_URL": os.getenv("GHL_MCP_SERVER_URL"),
-            "GHL_DEFAULT_CALENDAR_ID": os.getenv("GHL_DEFAULT_CALENDAR_ID"),
-            "GHL_CALENDAR_JEWELLER_ID": os.getenv("GHL_CALENDAR_JEWELLER_ID"),
-            "GHL_CALENDAR_AUDIT_ID": os.getenv("GHL_CALENDAR_AUDIT_ID"),
-            "GHL_CALENDAR_BOOKCALL_ID": os.getenv("GHL_CALENDAR_BOOKCALL_ID")
+            "GHL_MCP_SERVER_URL": os.getenv("GHL_MCP_SERVER_URL")
         }
         
         # Mask sensitive values
@@ -747,6 +836,13 @@ async def debug_ghl_status():
             else:
                 masked_env_vars[key] = None
         
+        # Get available calendars and tools from the client
+        available_calendars = None
+        available_tools = None
+        if ghl_mcp_client:
+            available_calendars = ghl_mcp_client.get_available_calendars()
+            available_tools = ghl_mcp_client.available_tools
+        
         return JSONResponse({
             "ghl_mcp_available": GHL_MCP_AVAILABLE,
             "ghl_scheduler_initialized": ghl_scheduler is not None,
@@ -754,6 +850,9 @@ async def debug_ghl_status():
             "ghl_extractor_initialized": ghl_extractor is not None,
             "environment_variables": masked_env_vars,
             "calendar_mappings": ghl_mcp_client.calendar_mappings if ghl_mcp_client else None,
+            "available_calendars": available_calendars,
+            "available_tools": available_tools,
+            "mcp_server_expected": "http://localhost:8000",
             "note": "This endpoint is for development purposes only"
         })
     except Exception as e:
