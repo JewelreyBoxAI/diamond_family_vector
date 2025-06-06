@@ -36,6 +36,10 @@ class GHLMCPClient:
             "create_contact_add_notes_schedule_appointment"
         ]
     
+    def list_available_tools(self) -> List[str]:
+        """Return list of available MCP tools."""
+        return self.available_tools.copy()
+    
     async def call_mcp_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Generic method to call any MCP tool."""
         if tool_name not in self.available_tools:

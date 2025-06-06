@@ -76,23 +76,39 @@ logger.setLevel(logging.INFO)
 
 # ─── WEB SEARCH TOOL IMPORT ───────────────────────────────────────────────────
 try:
+    # Try relative import first (when running as module)
     from .tools.web_search_tool import WebSearchTool
     WEB_SEARCH_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"WebSearchTool not available: {e}")
-    WebSearchTool = None
-    WEB_SEARCH_AVAILABLE = False
+except ImportError:
+    try:
+        # Try absolute import (when running directly)
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from tools.web_search_tool import WebSearchTool
+        WEB_SEARCH_AVAILABLE = True
+    except ImportError as e:
+        logger.warning(f"WebSearchTool not available: {e}")
+        WebSearchTool = None
+        WEB_SEARCH_AVAILABLE = False
 
 # ─── GHL MCP TOOL IMPORT ──────────────────────────────────────────────────────
 try:
+    # Try relative import first (when running as module)
     from .tools.ghl_mcp_client import GHLMCPClient, GHLAppointmentScheduler, CustomerInfoExtractor
     GHL_MCP_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"GHL MCP Client not available: {e}")
-    GHLMCPClient = None
-    GHLAppointmentScheduler = None
-    CustomerInfoExtractor = None
-    GHL_MCP_AVAILABLE = False
+except ImportError:
+    try:
+        # Try absolute import (when running directly)
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from tools.ghl_mcp_client import GHLMCPClient, GHLAppointmentScheduler, CustomerInfoExtractor
+        GHL_MCP_AVAILABLE = True
+    except ImportError as e:
+        logger.warning(f"GHL MCP Client not available: {e}")
+        GHLMCPClient = None
+        GHLAppointmentScheduler = None
+        CustomerInfoExtractor = None
+        GHL_MCP_AVAILABLE = False
 
 # ─── PATHS & TEMPLATES ────────────────────────────────────────────────────────
 
@@ -909,7 +925,7 @@ if __name__ == "__main__":
         print(f"📋 Environment: {'Production' if port != 8000 else 'Development'}")
         
         uvicorn.run(
-            "src.app:app",
+            app,
             host=host,
             port=port,
             reload=False,  # Set to True for development
