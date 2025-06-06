@@ -466,6 +466,20 @@ async def root():
     """Redirect root URL to the widget"""
     return RedirectResponse(url="/widget")
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and load balancers"""
+    from datetime import datetime
+    return JSONResponse({
+        "status": "healthy",
+        "mcp_available": ghl_mcp_client is not None,
+        "mcp_server": os.getenv("GHL_MCP_SERVER_URL", "Not configured"),
+        "web_search_available": web_search is not None,
+        "events_loaded": len(get_prompt_array('upcomingEvents')),
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    })
+
 # ─── CHAT ENDPOINT ───────────────────────────────────────────────────────────
 
 def serialize_messages(messages: list[BaseMessage]):

@@ -139,6 +139,44 @@ HOST=optional             # Server host (default: 0.0.0.0)
 GHL_MCP_SERVER_URL=optional        # GHL MCP server endpoint (default: http://localhost:8000)
 ```
 
+### 4. MCP Server Continuity
+- **Service Coordination**: Automated deployment with health checks
+- **Graceful Degradation**: Application continues without MCP server
+- **Error Recovery**: Automatic fallback to expo demonstration mode
+- **Health Monitoring**: Continuous service availability checking
+
+## MCP Server Integration Architecture
+
+### Service Dependencies
+```
+┌─────────────────────┐    HTTP/MCP     ┌──────────────────────┐
+│   JewelryBox AI     │ ◄────────────► │   GHL MCP Server     │
+│   (Primary)         │                │   (Secondary)        │
+├─────────────────────┤                ├──────────────────────┤
+│ • Chat Interface    │                │ • Contact Creation   │
+│ • Event/Promotion   │                │ • Appointment Sched  │
+│ • Web Search        │                │ • Calendar Selection │
+│ • Error Handling    │                │ • GHL API Proxy      │
+└─────────────────────┘                └──────────────────────┘
+         │                                        │
+         ▼                                        ▼
+┌─────────────────────┐                ┌──────────────────────┐
+│  Expo Demo Mode     │                │  GoHighLevel API     │
+│  (Fallback)         │                │  (Backend)           │
+└─────────────────────┘                └──────────────────────┘
+```
+
+### Deployment Strategy
+1. **Phase 1**: Deploy MCP Server with GHL credentials
+2. **Phase 2**: Deploy main application with MCP server URL
+3. **Phase 3**: Verify integration and run tests
+4. **Monitoring**: Continuous health checks and logging
+
+### Scripts & Tools
+- `deploy_continuity.sh`: Coordinated deployment automation
+- `monitor_services.sh`: Health monitoring and alerting
+- `MCP_CONTINUITY_PLAN.md`: Detailed operational procedures
+
 ## Design Patterns
 
 ### 1. Chain of Responsibility
